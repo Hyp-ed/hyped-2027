@@ -1,0 +1,129 @@
+use crate::boards::Board;
+pub use crate::emergency::Reason;
+use hyped_core::types::{Current, Force, Pressure, Temperature, Velocity, Voltage};
+
+#[derive(Debug, Clone, defmt::Format)]
+pub enum Event {
+    // ------ Operator Commands ------
+    EmergencyStopOperatorCommand,      // Emergency stop
+    IdleOperatorCommand,               // Force transition to idle
+    PrechargeOperatorCommand,          // Idle -> SetupMotor
+    AccelerateOperatorCommand,         // ReadyForPropulsion -> Accelerate
+    BrakeOperatorCommand,              // Accelerate -> Brake
+    StartRunOperatorCommand,           // SetupMotor -> Precharge
+    ReadyForPropulsionOperatorCommand, // Precharge -> ReadyForPropulsion
+
+    // ------ Emergency Events ------
+    Emergency {
+        from: Board,
+        reason: Reason,
+    },
+
+    // ------ Status Events ------
+    Heartbeat {
+        from: Board,
+    },
+    StateChanged {
+        state: &'static str,
+    },
+    ControlStatusChanged {
+        can_setup_motor: bool,
+        can_precharge: bool,
+        can_ready_for_propulsion: bool,
+        can_accelerate: bool,
+    },
+
+    // ------ Electronics ------
+
+    // Commands from FSM
+    StartPrechargeCommand,
+    StartDischargeCommand,
+    MotorControllerSetupCommand,
+    MotorControllerSetOperationalCommand,
+    OpenPrechargeRelaysCommand,
+
+    // Confirmation
+    PrechargeStarted,
+    DischargeStarted,
+
+    // Completion
+    PrechargeComplete,
+    DischargeComplete,
+
+    VoltageStatus {
+        voltage: Voltage,
+    },
+
+    // Voltage checks
+    PrechargeVoltageOK,
+    DischargeVoltageOK,
+
+    // Motor controller
+    MotorControllerSetupComplete,
+    MotorControllerOperational,
+
+    // Relays
+    ShutdownCircuitryRelayOpen,
+    ShutdownCircuitryRelayClosed,
+    BatteryPrechargeRelayOpen,
+    BatteryPrechargeRelayClosed,
+    MotorControllerRelayOpen,
+    MotorControllerRelayClosed,
+    DischargeRelayOpen,
+    DischargeRelayClosed,
+
+    // ------ Navigation ------
+    EndOfTrackBrakeCommand,
+
+    // ------ Dynamics ------
+
+    // Commands from FSM
+    UnclampBrakesCommand,
+    ClampBrakesCommand,
+    RetractLateralSuspensionCommand,
+    ExtendLateralSuspensionCommand,
+
+    // Completion
+    BrakesClamped {
+        from: Board,
+    },
+
+    BrakesUnclamped {
+        from: Board,
+    },
+
+    LateralSuspensionRetracted {
+        from: Board,
+    },
+
+    LateralSuspensionExtended {
+        from: Board,
+    },
+    DynamicsStatus {
+        from: Board,
+        actuator_pressure_bar: Pressure,
+    },
+
+    // ------ Propulsion ------
+
+    // Commands from FSM
+    StartPropulsionAccelerationCommand,
+    StartPropulsionBrakingCommand,
+
+    // Confirmation
+    PropulsionAccelerationStarted,
+    PropulsionBrakingStarted,
+
+    // Continuous status updates
+    PropulsionStatus {
+        current_ma: Current,
+        velocity_kmh: Velocity,
+        temperature_c: Temperature,
+        voltage_cv: Voltage,
+    },
+
+    // Calculated thrust force
+    PropulsionForce {
+        force_n: Force,
+    },
+}

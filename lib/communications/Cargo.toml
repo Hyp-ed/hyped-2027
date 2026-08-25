@@ -1,0 +1,16 @@
+[package]
+name = "hyped_communications"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+defmt = "0.3"
+heapless = "0.8"
+embassy-sync = { git = "https://github.com/embassy-rs/embassy", rev = "1c466b81e6af6b34b1f706318cc0870a459550b7", features = ["defmt"] }
+embassy-executor = { git = "https://github.com/embassy-rs/embassy", rev = "1c466b81e6af6b34b1f706318cc0870a459550b7", features = ["defmt"] }
+
+hyped_can = { path = "../io/hyped_can" }
+hyped_core = { path = "../core" }
+
+[dev-dependencies]
+defmt = { version = "0.3", features = ["unstable-test"] }
