@@ -1,0 +1,44 @@
+name: HDL
+
+on:
+  push:
+    branches: [fpga]
+    paths: ["hdl/**", ".github/workflows/hdl.yml"]
+  pull_request:
+    branches: [fpga]
+    paths: ["hdl/**", ".github/workflows/hdl.yml"]
+
+jobs:
+  hdl:
+    name: Verilator lint and tests
+    runs-on: ubuntu-24.04
+    container: verilator/verilator:v5.052
+    defaults:
+      run:
+        working-directory: hdl
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python tools
+        run: apt-get update && apt-get install -y python3-venv python3-pip
+
+      - name: Verilator version
+        run: verilator --version
+
+      - name: Set up cocotb
+        run: make setup
+
+      - name: Lint
+        run: make lint-all
+
+      - name: Testbenches
+        run: make test-all
+
+      - name: Upload waveforms if anything failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waveforms
+          path: |
+            hdl/build/**/waves.vcd
+            hdl/build/cocotb/**/dump.vcd
