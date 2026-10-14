@@ -26,15 +26,13 @@ module pwm #(
             counter      <= {WIDTH{1'b0}};
             duty_latched <= {WIDTH{1'b0}};
             pwm_out      <= 1'b0;
-        end else begin
-            counter <= counter + 1'b1;  // wraps back to 0 after 2^WIDTH - 1
+        end else begin 
+            counter <= counter + 1'b1; 
 
-            // Last cycle of the period: take the new duty for the next period
             if (counter == {WIDTH{1'b1}})
                 duty_latched <= duty;
 
             pwm_out <= (counter < duty_latched);
         end
     end
-
 endmodule
