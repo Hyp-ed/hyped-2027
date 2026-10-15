@@ -1,14 +1,15 @@
-// C++ testbench for rtl/pwm.v
+// C++ testbench for rtl/pwm_basic.v
 //
-// Verilator converts pwm.v into a C++ class called `Vpwm`. This file creates
-// that model, drives its inputs, toggles the clock, and checks the output.
+// Verilator converts pwm_basic.v into a C++ class called `Vpwm_basic`. This
+// file creates that model, drives its inputs, toggles the clock, and checks
+// the output.
 // It also records every signal into waves.vcd (in the build folder) so you
 // can view the waveforms in Surfer.
 
 #include <cstdio>
 #include <memory>
 
-#include "Vpwm.h"
+#include "Vpwm_basic.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
 
@@ -19,7 +20,7 @@ int main(int argc, char** argv) {
     ctx->commandArgs(argc, argv);
     ctx->traceEverOn(true);
 
-    auto dut = std::make_unique<Vpwm>(ctx.get());
+    auto dut = std::make_unique<Vpwm_basic>(ctx.get());
 
     auto trace = std::make_unique<VerilatedVcdC>();
     dut->trace(trace.get(), 99);

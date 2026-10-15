@@ -1,38 +1,79 @@
-// PWM generator
+// PWM generator (centred pulses)
 //
-// Produces a pulse-width modulated output: a square wave whose "high" fraction
-// (the duty cycle) is set by the `duty` input.
+// Produces a pulse-width modulated output at a fixed frequency, with each pulse
+// centred in its period. Because the pulse is always centred, the middle of the
+// on-time falls at the same point in every period whatever the duty, which is
+// where the coil current should be sampled (it equals the average current there).
 //
-//   period      = 2^WIDTH clock cycles
-//   high cycles = duty   (so duty = 64 with WIDTH = 8 gives 64/256 = 25% high)
+// Parameters:
+//   CLK_FREQ_KHZ  clock frequency in kHz (default 100_000 = 100 MHz)
+//   PWM_FREQ_KHZ  PWM frequency in kHz (default 20)
+//   WIDTH         width of `duty`; derived so it can hold COUNT, leave as default
 //
-// A new `duty` value is only picked up at the start of each period. Without
-// this, changing `duty` mid-period could produce a glitchy, shortened pulse.
-
+//   COUNT = CLK_FREQ_KHZ / PWM_FREQ_KHZ   clock cycles per period (5000 by default)
+//
+// Ports:
+//   clk      clock at CLK_FREQ_KHZ
+//   rst      synchronous, active-high reset; output low, duty 0 until set
+//   duty     [WIDTH-1:0] number of high cycles per period, 0 to COUNT.
+//            0 = always off; COUNT or more = always on (clamped, never wraps)
+//   enable   low: output forced low on the next clock edge. The counter keeps
+//            running, so the PWM stays in step with the rest of the system.
+//            High again: output resumes at the start of the next period, so
+//            the first pulse after a fault is always a complete one.
+//   pwm_out  the PWM output
+//
+// Timing:
+//   - A new `duty` is only picked up at the start of each period (shadow
+//     register), so changing it mid-period can never produce a malformed pulse.
+//   - The pulse occupies counter values start .. start + duty - 1, where
+//     start = (COUNT - duty) / 2. When COUNT - duty is odd, the off-time after
+//     the pulse is one cycle longer than the off-time before it.
+//   - pwm_out is registered: it changes one clock cycle after the counter value
+//     that causes the change.
+`default_nettype none
 module pwm #(
-    parameter WIDTH = 8
+    parameter PWM_FREQ_KHZ  = 20,          // KHz
+    parameter CLK_FREQ_KHZ  = 100_000,
+    parameter WIDTH         = $clog2(CLK_FREQ_KHZ / PWM_FREQ_KHZ + 1)
 ) (
-    input  wire             clk,
-    input  wire             rst,      // synchronous, active high
-    input  wire [WIDTH-1:0] duty,
-    output reg              pwm_out
+    input  wire                 clk,      
+    input  wire                 rst,      // synchronous, active high
+    input  wire [WIDTH - 1 : 0] duty,
+    input  wire                 enable,
+    output reg                  pwm_out
 );
 
-    reg [WIDTH-1:0] counter;
-    reg [WIDTH-1:0] duty_latched;
+    localparam integer COUNT_INT = CLK_FREQ_KHZ / PWM_FREQ_KHZ;
+    localparam [WIDTH - 1 : 0] COUNT = COUNT_INT[WIDTH - 1 : 0];
+
+
+    reg [WIDTH - 1 : 0] counter;
+    reg [WIDTH - 1 : 0] duty_latched;
+    reg [WIDTH - 1 : 0] CA_BUFFER;
+    reg                 enable_period;
+
 
     always @(posedge clk) begin
         if (rst) begin
-            counter      <= {WIDTH{1'b0}};
-            duty_latched <= {WIDTH{1'b0}};
-            pwm_out      <= 1'b0;
-        end else begin 
-            counter <= counter + 1'b1; 
-
-            if (counter == {WIDTH{1'b1}})
-                duty_latched <= duty;
-
-            pwm_out <= (counter < duty_latched);
+            counter         <= {WIDTH{1'b0}};
+            duty_latched    <= {WIDTH{1'b0}};
+            CA_BUFFER       <= {WIDTH{1'b0}};
+            enable_period   <= 1'b0;
+            pwm_out         <= 1'b0;
+        end else begin
+            if (counter == COUNT - 1) begin
+                duty_latched    <= duty;
+                CA_BUFFER       <= (duty < COUNT) ? (COUNT - duty) / 2 : 0;
+                counter         <= {WIDTH{1'b0}};
+                enable_period   <= enable;
+            end else begin
+                counter <= counter + 1'b1; 
+            end
+            pwm_out <= enable & enable_period
+                     & (counter >= CA_BUFFER)
+                     & (counter < duty_latched + CA_BUFFER);
+            end
         end
-    end
 endmodule
+`default_nettype wire

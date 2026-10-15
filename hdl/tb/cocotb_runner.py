@@ -43,4 +43,6 @@ def run(toplevel, test_module, parameters=None, waves=True):
         test_module=test_module,
         build_dir=build_dir,
         waves=waves,
+        # Tests read their build's parameters from PARAM_<NAME> variables
+        extra_env={f"PARAM_{name}": str(value) for name, value in parameters.items()},
     )
