@@ -3,7 +3,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      - SWAGGER_JSON_URL=/swagger/swagger.json
+      - SWAGGER_JSON_URL=/swagger/swagger.yaml
     volumes:
       - ./swagger:/usr/share/nginx/html/swagger
     image: docker.swagger.io/swaggerapi/swagger-ui
