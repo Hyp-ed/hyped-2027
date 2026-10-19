@@ -1,0 +1,39 @@
+openapi: 3.0.4
+info:
+  title: Hyped telemetry backend
+  description: Telemetry backend documentation
+
+servers:
+  - url: http://localhost:8000
+    description: locally hosted (Testing server) via docker
+
+paths:
+  /auth/login:
+    get:
+      summary: Login, it should put a request to the database and return a session token and save that to the cookies
+    tags:
+      - authentication
+  /auth/signup:
+    get:
+      summary: signup
+    tags:
+      - authentication
+  /auth/signout:
+    get:
+      summary: Signout action, it should remove the session token from the client's browser
+    tags:
+      - authentication
+
+  /hyped/{podId}/controls/levitation_height:
+    get:
+      summary: Sets levitation height for a pod, Subscriber (Pod), Publisher (Telemetry Server)
+      parameters:
+        - in: path
+          name: podID
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        description: 
+    tags:
+      - MQTT Message
