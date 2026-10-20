@@ -10,11 +10,29 @@
 
 ## How to run
 
+> [!IMPORTANT]
+> Install docker beforehand
+
 To run the telemetry backend, frontend and swagger docs
 
 `docker compose up -d`
 
-**TO DO, THE BACKEND AND FRONTEND NOT COMPLETE**
+To stop all of them:
+
+`docker compose down`
+
+### Backend
+
+The Backend is hosted on `localhost:8000` in the testing environment
+
+To get live build log messages of the backend do `docker compose logs air -f`
+
+> [!TIP]
+> The backend automatically hot reload and rebuilt the application, if you are in the test environment
+
+### Swagger
+
+To navigate to the swagger UI (the API docs) go to `localhost:8080`
 
 ## New backend plans
 
@@ -22,7 +40,6 @@ To run the telemetry backend, frontend and swagger docs
 - [ ] implement swagger docs - authentication
 - [ ] implement swagger docs - public app
 - [ ] implement swagger docs - state transition
-- [ ] implement swagger docs - state subscription
 - [ ] implement all the API end point written by the docs
 
 ## The API directory
@@ -30,6 +47,7 @@ To run the telemetry backend, frontend and swagger docs
 `/` - public data page
 `/auth/login` & `/auth/signup`
 `/dashboard` will be protected
+`/protected-api/`
 
 ## Swagger Docs
 

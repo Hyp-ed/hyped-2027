@@ -36,6 +36,9 @@ All microcontrollers on our pod will communicate with each other (for sending se
 
 ### 2. Base Station (Telemetry)
 
+> [!IMPORTANT]
+> For more details for the new Telemetry system go to [New Telemetry](https://github.com/Hyp-ed/hyped-2027/tree/main/telemetry_new)
+
 The base station (aka Telemetry) is responsible for monitoring the pod's systems, visualising data, and sending commands to the pod. The Telemetry system is written in TypeScript and runs on a base station computer connected to the pod via 2.4GHz radio antennas ([Ubiquiti Rocket M2s](https://techspecs.ui.com/uisp/wireless/rocketm2)). (On the pod-side, the Telemetry board is connected to one of the Rockets and relays messages onto the other microcontrollers over CAN.) The [MQTT](https://mqtt.org/) IoT messaging protocol is used to transfer messages between the pod and the base station.
 
 The base station consists of two main components:
