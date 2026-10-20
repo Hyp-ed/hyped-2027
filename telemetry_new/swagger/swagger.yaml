@@ -34,6 +34,11 @@ paths:
             type: integer
           required: true
       requestBody:
-        description: 
+        description:
     tags:
       - MQTT Message
+  /ping:
+    get:
+      summary: return pong in return
+    tags:
+      - testing

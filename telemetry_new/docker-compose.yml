@@ -7,3 +7,12 @@ services:
     volumes:
       - ./swagger:/usr/share/nginx/html/swagger
     image: docker.swagger.io/swaggerapi/swagger-ui
+  air:
+      stdin_open: true
+      tty: true
+      working_dir: /go/src/hyped/backend_telemetry
+      volumes:
+          - ./backend:/go/src/hyped/backend_telemetry
+      ports:
+          - 8000:8000
+      image: cosmtrek/air:latest
