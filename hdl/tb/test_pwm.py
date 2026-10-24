@@ -30,7 +30,8 @@ class PwmModel:
     """Reference model of pwm.v, following the spec in its header.
 
     clock() is called once per rising edge with the inputs as they were just
-    before the edge, and returns what pwm_out should be just after it.
+    before the edge, and returns what (pwm_out, centre_pulse) should be just
+    after it.
     """
 
     def __init__(self, count):
@@ -43,14 +44,17 @@ class PwmModel:
         self.start = 0         # first counter value of the pulse
         self.enabled = False   # enable as sampled at the last period boundary
         self.out = 0
+        self.centre = 0
 
     def clock(self, rst, enable, duty):
         if rst:
             self.reset()
-            return self.out
+            return self.out, self.centre
 
         in_pulse = self.start <= self.counter < self.start + self.duty
         self.out = int(enable and self.enabled and in_pulse)
+        # Middle of the period, every period, whatever the duty or enable
+        self.centre = int(self.counter == (self.count - 1) // 2)
 
         if self.counter == self.count - 1:  # end of period: take new settings
             self.duty = duty
@@ -59,23 +63,27 @@ class PwmModel:
             self.counter = 0
         else:
             self.counter += 1
-        return self.out
+        return self.out, self.centre
 
 
 async def monitor(dut, model, mismatches):
-    """Compare pwm_out with the model on every clock cycle."""
+    """Compare pwm_out and centre_pulse with the model on every clock cycle."""
     cycle = 0
     while True:
         await RisingEdge(dut.clk)
         # Inputs only change on falling edges, so these are the values the
         # design saw at this rising edge
-        expected = model.clock(
+        expected_out, expected_centre = model.clock(
             int(dut.rst.value), int(dut.enable.value), int(dut.duty.value)
         )
         await ReadOnly()  # let the edge's updates settle before reading
-        actual = int(dut.pwm_out.value)
-        if actual != expected:
-            mismatches.append(f"cycle {cycle}: pwm_out = {actual}, expected {expected}")
+        actual_out = int(dut.pwm_out.value)
+        actual_centre = int(dut.centre_pulse.value)
+        if actual_out != expected_out:
+            mismatches.append(f"cycle {cycle}: pwm_out = {actual_out}, expected {expected_out}")
+        if actual_centre != expected_centre:
+            mismatches.append(
+                f"cycle {cycle}: centre_pulse = {actual_centre}, expected {expected_centre}")
         cycle += 1
 
 
@@ -262,6 +270,58 @@ async def reenable_waits_for_next_period(dut):
 
     high = await high_cycles_over_one_period(dut)
     assert high == COUNT, f"first full period after re-enable: high for {high} of {COUNT}"
+    check_model(mismatches)
+
+
+@cocotb.test()
+async def centre_pulse_marks_middle_of_pulse(dut):
+    """centre_pulse fires once per period, in the middle of the output pulse."""
+    mismatches = await setup(dut)
+
+    for duty in sorted({0, 2, COUNT // 3, COUNT // 2, COUNT - 1, COUNT}):
+        await set_inputs(dut, duty=duty)
+        await ClockCycles(dut.clk, 2 * COUNT)
+
+        # Record one period: the output, and when the centre pulse came
+        outputs, centre_cycles = [], []
+        for i in range(COUNT):
+            await RisingEdge(dut.clk)
+            await ReadOnly()
+            outputs.append(int(dut.pwm_out.value))
+            if int(dut.centre_pulse.value):
+                centre_cycles.append(i)
+
+        assert len(centre_cycles) == 1, (
+            f"duty {duty}: {len(centre_cycles)} centre pulses in one period, expected 1")
+
+        if 2 <= duty < COUNT:  # a pulse with a middle that isn't the whole period
+            c = centre_cycles[0]
+            # pwm_out and centre_pulse are both registered from the same
+            # counter, so the centre lines up with the output pulse. The
+            # recording starts at an arbitrary point in the period, so a long
+            # pulse can wrap round its edges: count the high cycles walking
+            # outwards from the centre, wrapping round the period.
+            high_before = 0
+            while outputs[(c - 1 - high_before) % COUNT]:
+                high_before += 1
+            high_after = 0
+            while outputs[(c + 1 + high_after) % COUNT]:
+                high_after += 1
+            dut._log.info(f"duty {duty:5d}: {high_before} high before centre, {high_after} after")
+            assert outputs[c] == 1, f"duty {duty}: output low at the centre pulse"
+            assert abs(high_after - high_before) <= 1, (
+                f"duty {duty}: {high_before} high cycles before centre, {high_after} after")
+
+    # The centre pulse is a timing reference, so it keeps going while disabled
+    await set_inputs(dut, enable=0)
+    await ClockCycles(dut.clk, COUNT)
+    pulses = 0
+    for _ in range(COUNT):
+        await RisingEdge(dut.clk)
+        await ReadOnly()
+        pulses += int(dut.centre_pulse.value)
+    assert pulses == 1, f"{pulses} centre pulses in a disabled period, expected 1"
+
     check_model(mismatches)
 
 

@@ -29,11 +29,18 @@ def run(toplevel, test_module, parameters=None, waves=True):
     suffix = "_".join(f"{name}{value}" for name, value in sorted(parameters.items()))
     build_dir = BUILD_DIR / "cocotb" / (f"{toplevel}_{suffix}" if suffix else toplevel)
 
+    # Packages (rtl/*_pkg.sv) are compiled first, then the module itself (.sv or .v)
+    rtl = SRC_DIR / "rtl"
+    packages = sorted(rtl.glob("*_pkg.sv"))
+    top_file = rtl / f"{toplevel}.sv"
+    if not top_file.exists():
+        top_file = rtl / f"{toplevel}.v"
+
     runner = get_runner("verilator")
     runner.build(
-        sources=[SRC_DIR / "rtl" / f"{toplevel}.v"],
+        sources=[*packages, top_file],
         hdl_toplevel=toplevel,
-        build_args=["-y", str(SRC_DIR / "rtl")],  # find submodules in rtl/
+        build_args=["-y", str(rtl)],  # find submodules in rtl/
         parameters=parameters,
         build_dir=build_dir,
         waves=waves,
