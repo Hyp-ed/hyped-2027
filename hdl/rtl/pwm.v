@@ -22,6 +22,10 @@
 //            High again: output resumes at the start of the next period, so
 //            the first pulse after a fault is always a complete one.
 //   pwm_out  the PWM output
+//   centre_pulse  one-cycle pulse at the middle of each period (counter = (COUNT-1)/2),
+//                 i.e. the middle of the on-time whatever the duty. Pulses every period,
+//                 even when disabled or at 0%: it is the timing reference for sampling
+//                 the coil current.
 //
 // Timing:
 //   - A new `duty` is only picked up at the start of each period (shadow
@@ -41,11 +45,13 @@ module pwm #(
     input  wire                 rst,      // synchronous, active high
     input  wire [WIDTH - 1 : 0] duty,
     input  wire                 enable,
-    output reg                  pwm_out
+    output reg                  pwm_out,
+    output reg                  centre_pulse
 );
 
     localparam integer COUNT_INT = CLK_FREQ_KHZ / PWM_FREQ_KHZ;
     localparam [WIDTH - 1 : 0] COUNT = COUNT_INT[WIDTH - 1 : 0];
+    localparam [WIDTH - 1 : 0] CENTRE = (COUNT - 1) / 2;
 
 
     reg [WIDTH - 1 : 0] counter;
@@ -60,6 +66,7 @@ module pwm #(
             duty_latched    <= {WIDTH{1'b0}};
             CA_BUFFER       <= {WIDTH{1'b0}};
             enable_period   <= 1'b0;
+            centre_pulse    <= 1'b0;
             pwm_out         <= 1'b0;
         end else begin
             if (counter == COUNT - 1) begin
@@ -70,6 +77,7 @@ module pwm #(
             end else begin
                 counter <= counter + 1'b1; 
             end
+            centre_pulse <= (counter == CENTRE);
             pwm_out <= enable & enable_period
                      & (counter >= CA_BUFFER)
                      & (counter < duty_latched + CA_BUFFER);
