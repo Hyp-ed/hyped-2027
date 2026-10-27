@@ -1,0 +1,6 @@
+[
+  { "ReadyToSetupMotor": 0 },
+  { "ReadyToPrecharge": 1 },
+  { "ReadyToReadyForPropulsion": 2 },
+  { "ReadyToAccelerate": 3 }
+]

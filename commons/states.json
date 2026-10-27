@@ -1,0 +1,9 @@
+[
+  { "IdleState": 0 },
+  { "SetupMotor": 1 },
+  { "Precharge": 2 },
+  { "ReadyForPropulsion": 3 },
+  { "Accelerate": 4 },
+  { "Brake": 5 },
+  { "Stopped": 6 }
+]
