@@ -129,8 +129,25 @@ channels:
         description: the id of the pod.
         default: "0"
       measurementId:
-        description: the id of the measurement.
-        default: "0"
+        description: |
+          the id of the measurement.
+          100: HVAL Green Light Status
+          200: HVAL Red Light Status
+          300: IMDStatus
+          400: HV BMS Status
+          500: LV BMS Status
+          601: TempSensors
+          602: PressureSensors
+          603: MotorControllerCmd
+        enum:
+          - "100"
+          - "200"
+          - "300"
+          - "400"
+          - "500"
+          - "601"
+          - "602"
+          - "603"
     messages:
       hvalGreenLightStatus:
         title: HVAL Green Light Status
