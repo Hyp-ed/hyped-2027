@@ -4,6 +4,7 @@ asyncapi: 3.1.0
 info:
   title: MQTT messages from the Pod to base station
   version: 1.0.0
+  description: Operations are described from the pod's point of view. `send` is a message the pod publishes, and `receive` is one the base station publishes to the pod.
 defaultContentType: application/cbor
 
 servers:
@@ -202,3 +203,96 @@ channels:
           schemaFormat: application/json
           schema:
             $ref: './schemas/controls/command.schema.json'
+
+operations:
+  sendRegisterRequest:
+    action: send
+    summary: The pod registers itself with the base station.
+    channel:
+      $ref: '#/channels/register'
+    messages:
+      - $ref: '#/channels/register/messages/request'
+    reply:
+      channel:
+        $ref: '#/channels/register'
+      messages:
+        - $ref: '#/channels/register/messages/response'
+
+  sendState:
+    action: send
+    summary: The pod reports its current state.
+    channel:
+      $ref: '#/channels/state'
+    messages:
+      - $ref: '#/channels/state/messages/update'
+
+  sendLogs:
+    action: send
+    summary: The pod sends its logs.
+    channel:
+      $ref: '#/channels/logs'
+    messages:
+      - $ref: '#/channels/logs/messages/logs'
+
+  sendWarnings:
+    action: send
+    summary: The pod sends its warnings.
+    channel:
+      $ref: '#/channels/warnings'
+    messages:
+      - $ref: '#/channels/warnings/messages/warnings'
+
+  sendFaults:
+    action: send
+    summary: The pod sends its faults.
+    channel:
+      $ref: '#/channels/faults'
+    messages:
+      - $ref: '#/channels/faults/messages/faults'
+
+  sendControlStatus:
+    action: send
+    summary: The pod reports which state transitions it is ready for.
+    channel:
+      $ref: '#/channels/control_status'
+    messages:
+      - $ref: '#/channels/control_status/messages/status'
+
+  sendPing:
+    action: send
+    summary: The pod sends a heartbeat.
+    channel:
+      $ref: '#/channels/heartbeat'
+    messages:
+      - $ref: '#/channels/heartbeat/messages/ping'
+
+  receivePong:
+    action: receive
+    summary: The base station sends a heartbeat.
+    channel:
+      $ref: '#/channels/heartbeat'
+    messages:
+      - $ref: '#/channels/heartbeat/messages/pong'
+
+  sendMeasurement:
+    action: send
+    summary: The pod sends a sensor reading.
+    channel:
+      $ref: '#/channels/measurement'
+    messages:
+      - $ref: '#/channels/measurement/messages/hvalGreenLightStatus'
+      - $ref: '#/channels/measurement/messages/hvalRedLightStatus'
+      - $ref: '#/channels/measurement/messages/imdStatus'
+      - $ref: '#/channels/measurement/messages/hvBmsStatus'
+      - $ref: '#/channels/measurement/messages/lvBmsStatus'
+      - $ref: '#/channels/measurement/messages/tempSensors'
+      - $ref: '#/channels/measurement/messages/pressureSensors'
+      - $ref: '#/channels/measurement/messages/motorControllerCmd'
+
+  receiveCommand:
+    action: receive
+    summary: The base station sends an operator command.
+    channel:
+      $ref: '#/channels/controls'
+    messages:
+      - $ref: '#/channels/controls/messages/command'
