@@ -1,0 +1,5 @@
+payload = [
+    sns1: float32,
+    sns2: float32,
+    sns3: float32
+]

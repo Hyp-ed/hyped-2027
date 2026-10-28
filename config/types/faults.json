@@ -1,0 +1,8 @@
+[
+  { "Panic": 0 },
+  { "Temp": 1 },
+  { "Pressure": 2 },
+  { "BMS": 3 },
+  { "IMD": 4 },
+  { "Motor": 5 }
+]
