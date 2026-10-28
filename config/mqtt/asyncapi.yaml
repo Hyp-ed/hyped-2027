@@ -10,19 +10,25 @@ servers:
     protocol: mqtt
 
 channels:
-  info:
-    address: hyped/{podId}/info
+  register:
+    address: hyped/{podId}/register
     parameters:
       podId:
         description: the id of the pod
         default: 0
     messages:
-      info:
+      request:
         contentType: application/cbor
         payload:
           schema: application/json
           schema:
-            $ref: './schemas/info/info.json'
+            $ref: './schemas/register/request.schema.json'
+      response:
+        contentType: application/cbor
+        payload:
+          schema: application/json
+          schema:
+            $ref: './schemas/register/response.schema.json'
 
   state:
     address: hyped/{podId}/state
@@ -36,7 +42,7 @@ channels:
         payload:
           schemaFormat: application/json
           schema:
-            $ref: './schemas/state/update.json'
+            $ref: './schemas/state/update.schema.json'
 
   logs:
     address: hyped/{podId}/logs
@@ -50,7 +56,7 @@ channels:
         payload:
           schemaFormat: application/json
           schema:
-            $ref: './schemas/logs/logs.json'
+            $ref: './schemas/logs/logs.schema.json'
 
   warnings:
     address: hyped/{podId}/warnings

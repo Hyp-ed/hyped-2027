@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "file:///schemas/register/request.schema.json",
+  "title": "Registeration",
+  "description": "The pod will register itself to the base station",
+  "type": "array",
+
+  "prefixItems": [
+    {
+      "title": "name",
+      "description": "Pod name.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    }
+  ],
+  "items": false,
+  "minItems": 1
+}

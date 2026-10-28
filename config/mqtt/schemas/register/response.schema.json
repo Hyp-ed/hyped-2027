@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "file:///schemas/register/response.schema.json",
+  "title": "Registration Response",
+  "description": "The base station's response. Encoded as [statusCode].",
+  "type": "array",
+
+  "prefixItems": [{ "title": "statusCode", "$ref": "#/$defs/status" }],
+  "items": false,
+  "minItems": 1,
+
+  "$defs": {
+    "status": {
+      "oneOf": [
+        {
+          "const": 0,
+          "title": "SUCCESS",
+          "description": "Registration accepted."
+        },
+        {
+          "const": 1,
+          "title": "REPEATED_REGISTRATION",
+          "description": "Id already registered."
+        }
+      ]
+    }
+  }
+}
