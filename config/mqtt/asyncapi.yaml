@@ -1,0 +1,110 @@
+asyncapi: 3.0.0
+info:
+  title: MQTT messages from the Pod to base station
+  version: 1.0.0
+defaultContentType: application/cbor
+
+servers:
+  production:
+    host: random broker servers
+    protocol: mqtt
+
+channels:
+  info:
+    address: hyped/{podId}/info
+    parameters:
+      podId:
+        description: the id of the pod
+        default: 0
+    messages:
+      info:
+        contentType: application/cbor
+        payload:
+          schema: application/json
+          schema:
+            $ref: './schemas/info/info.json'
+
+  state:
+    address: hyped/{podId}/state
+    parameters:
+      podId:
+        description: the id of the pod. 
+        default: 0
+    messages:
+      update:
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/state/update.json'
+
+  logs:
+    address: hyped/{podId}/logs
+    parameters:
+      podId:
+        description: the id of the pod. 
+        default: 0
+    messages:
+      logs:
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/logs/logs.json'
+
+  warnings:
+    address: hyped/{podId}/warnings
+    parameters:
+      podId:
+        description: the id of the pod. 
+        default: 0
+    messages:
+      TODODODODOD
+
+  faults:
+    address: hyped/{podId}/faults
+    parameters:
+      podId:
+        description: the id of the pod. 
+        default: 0
+    messages:
+      TODODODODOD
+
+  control_status:
+    address: hyped/{podId}/control-status
+    parameters:
+      podId:
+        description: the id of the pod. 
+        default: 0
+    messages:
+      TODODODODOD
+
+  heartbeat:
+    address: hyped/{podId}/heartbeat
+    parameters:
+      podId:
+        description: the id of the pod. 
+        default: 0
+    messages:
+      TODODODODO
+
+  measurement:
+    address: hyped/{podId}/measurement/{measurementId}
+    parameters:
+      podId:
+        description: the id of the pod.
+        default: 0
+      measurementId:
+        description: the id of the measurement.
+        default: 0
+    messages:
+      TODODODODOOD
+
+  controls:
+    address: hyped/{podId}/controls
+    parameters:
+      podId:
+        description: the id of the pod.
+        default: 0
+    messages:
+      TODODODODODO
