@@ -1,4 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///schemas/heartbeat/pong.schema.json"
+  "$id": "file:///schemas/heartbeat/pong.schema.json",
+  "title": "Pong",
+  "description": "Reply to a ping. Carries no data; encoded as [].",
+  "type": "array",
+  "maxItems": 0
 }

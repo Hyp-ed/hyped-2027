@@ -1,4 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///schemas/heartbeat/ping.schema.json"
+  "$id": "file:///schemas/heartbeat/ping.schema.json",
+  "title": "Ping",
+  "description": "Heartbeat sent to check the other side is alive. Carries no data; encoded as [].",
+  "type": "array",
+  "maxItems": 0
 }

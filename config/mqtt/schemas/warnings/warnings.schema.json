@@ -1,4 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///schemas/warnings/warnings.schema.json"
+  "$id": "file:///schemas/warnings/warnings.schema.json",
+  "title": "Warnings",
+  "description": "Raw warning output from the pod. Encoded as [warning].",
+  "type": "array",
+
+  "prefixItems": [{ "title": "warning", "$ref": "../common.schema.json#bytes" }],
+  "items": false,
+  "minItems": 1
 }

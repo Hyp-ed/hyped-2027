@@ -20,13 +20,13 @@ channels:
       request:
         contentType: application/cbor
         payload:
-          schema: application/json
+          schemaFormat: application/json
           schema:
             $ref: './schemas/register/request.schema.json'
       response:
         contentType: application/cbor
         payload:
-          schema: application/json
+          schemaFormat: application/json
           schema:
             $ref: './schemas/register/response.schema.json'
 
@@ -34,7 +34,7 @@ channels:
     address: hyped/{podId}/state
     parameters:
       podId:
-        description: the id of the pod. 
+        description: the id of the pod.
         default: 0
     messages:
       update:
@@ -48,7 +48,7 @@ channels:
     address: hyped/{podId}/logs
     parameters:
       podId:
-        description: the id of the pod. 
+        description: the id of the pod.
         default: 0
     messages:
       logs:
@@ -62,37 +62,63 @@ channels:
     address: hyped/{podId}/warnings
     parameters:
       podId:
-        description: the id of the pod. 
+        description: the id of the pod.
         default: 0
     messages:
-      TODODODODOD
+      warnings:
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/warnings/warnings.schema.json'
 
   faults:
     address: hyped/{podId}/faults
     parameters:
       podId:
-        description: the id of the pod. 
+        description: the id of the pod.
         default: 0
     messages:
-      TODODODODOD
+      faults:
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/faults/faults.schema.json'
 
   control_status:
     address: hyped/{podId}/control-status
     parameters:
       podId:
-        description: the id of the pod. 
+        description: the id of the pod.
         default: 0
     messages:
-      TODODODODOD
+      status:
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/control-status/status.schema.json'
 
   heartbeat:
     address: hyped/{podId}/heartbeat
     parameters:
       podId:
-        description: the id of the pod. 
+        description: the id of the pod.
         default: 0
     messages:
-      TODODODODO
+      ping:
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/heartbeat/ping.schema.json'
+      pong:
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/heartbeat/pong.schema.json'
 
   measurement:
     address: hyped/{podId}/measurement/{measurementId}
@@ -104,7 +130,62 @@ channels:
         description: the id of the measurement.
         default: 0
     messages:
-      TODODODODOOD
+      hvalGreenLightStatus:
+        title: HVAL Green Light Status
+        summary: Sent when measurementId is 100. No CDDL definition yet.
+        contentType: application/cbor
+      hvalRedLightStatus:
+        title: HVAL Red Light Status
+        summary: Sent when measurementId is 200. No CDDL definition yet.
+        contentType: application/cbor
+      imdStatus:
+        title: IMDStatus
+        summary: Sent when measurementId is 300.
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/measurement/measurement.schema.json#/$defs/imdStatus'
+      hvBmsStatus:
+        title: HV BMS Status
+        summary: Sent when measurementId is 400.
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/measurement/measurement.schema.json#/$defs/bmsStatus'
+      lvBmsStatus:
+        title: LV BMS Status
+        summary: Sent when measurementId is 500.
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/measurement/measurement.schema.json#/$defs/bmsStatus'
+      tempSensors:
+        title: TempSensors
+        summary: Sent when measurementId is 601.
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/measurement/measurement.schema.json#/$defs/tempSensors'
+      pressureSensors:
+        title: PressureSensors
+        summary: Sent when measurementId is 602.
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/measurement/measurement.schema.json#/$defs/pressureSensors'
+      motorControllerCmd:
+        title: MotorControllerCmd
+        summary: Sent when measurementId is 603.
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/measurement/measurement.schema.json#/$defs/motorControllerCmd'
 
   controls:
     address: hyped/{podId}/controls
@@ -113,4 +194,9 @@ channels:
         description: the id of the pod.
         default: 0
     messages:
-      TODODODODODO
+      command:
+        contentType: application/cbor
+        payload:
+          schemaFormat: application/json
+          schema:
+            $ref: './schemas/controls/command.schema.json'

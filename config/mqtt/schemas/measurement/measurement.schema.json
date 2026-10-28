@@ -1,4 +1,252 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///schemas/measurement/measurement.schema.json"
+  "$id": "file:///schemas/measurement/measurement.schema.json",
+  "title": "Measurement",
+  "description": "A sensor reading from the pod. The measurement ID is in the topic (hyped/{podId}/measurement/{measurementId}), and it decides which payload shape applies.",
+  "anyOf": [
+    {
+      "title": "HVAL Green Light Status",
+      "description": "Payload for measurementId 100. No CDDL definition yet."
+    },
+    {
+      "title": "HVAL Red Light Status",
+      "description": "Payload for measurementId 200. No CDDL definition yet."
+    },
+    {
+      "title": "IMDStatus",
+      "description": "Payload for measurementId 300.",
+      "$ref": "#/$defs/imdStatus"
+    },
+    {
+      "title": "HV BMS Status",
+      "description": "Payload for measurementId 400.",
+      "$ref": "#/$defs/bmsStatus"
+    },
+    {
+      "title": "LV BMS Status",
+      "description": "Payload for measurementId 500.",
+      "$ref": "#/$defs/bmsStatus"
+    },
+    {
+      "title": "TempSensors",
+      "description": "Payload for measurementId 601.",
+      "$ref": "#/$defs/tempSensors"
+    },
+    {
+      "title": "PressureSensors",
+      "description": "Payload for measurementId 602.",
+      "$ref": "#/$defs/pressureSensors"
+    },
+    {
+      "title": "MotorControllerCmd",
+      "description": "Payload for measurementId 603.",
+      "$ref": "#/$defs/motorControllerCmd"
+    }
+  ],
+  "$defs": {
+    "imdStatus": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "title": "corrected",
+          "$ref": "../common.schema.json#uint"
+        },
+        {
+          "title": "status",
+          "$ref": "../common.schema.json#uint"
+        },
+        {
+          "title": "measurement_counter",
+          "$ref": "../common.schema.json#uint"
+        },
+        {
+          "title": "warnings_and_alarms",
+          "$ref": "../common.schema.json#uint"
+        },
+        {
+          "title": "device_activity",
+          "$ref": "../common.schema.json#uint"
+        }
+      ],
+      "items": false,
+      "minItems": 5
+    },
+    "bmsStatus": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "title": "voltage",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "current",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "max_cell_mv",
+          "$ref": "../common.schema.json#uint"
+        },
+        {
+          "title": "min_cell_mv",
+          "$ref": "../common.schema.json#uint"
+        },
+        {
+          "title": "temperatures_c",
+          "type": "array",
+          "prefixItems": [
+            {
+              "title": "internal",
+              "type": "integer"
+            },
+            {
+              "title": "external1",
+              "type": "integer"
+            },
+            {
+              "title": "external2",
+              "type": "integer"
+            }
+          ],
+          "items": false,
+          "minItems": 3
+        },
+        {
+          "title": "cell_voltages_mv",
+          "type": "array",
+          "items": {
+            "$ref": "../common.schema.json#uint"
+          },
+          "minItems": 16,
+          "maxItems": 16
+        }
+      ],
+      "items": false,
+      "minItems": 6
+    },
+    "tempSensors": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "title": "sns1",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns2",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns3",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns4",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns5",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns6",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns7",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns8",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns9",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns10",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns11",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns12",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns13",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns14",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns15",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns16",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns17",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns18",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns19",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns20",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns21",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns22",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns23",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns24",
+          "$ref": "../common.schema.json#float32"
+        }
+      ],
+      "items": false,
+      "minItems": 24
+    },
+    "pressureSensors": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "title": "sns1",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns2",
+          "$ref": "../common.schema.json#float32"
+        },
+        {
+          "title": "sns3",
+          "$ref": "../common.schema.json#float32"
+        }
+      ],
+      "items": false,
+      "minItems": 3
+    },
+    "motorControllerCmd": {
+      "$ref": "../common.schema.json#uint"
+    }
+  }
 }

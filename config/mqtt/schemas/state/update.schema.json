@@ -1,4 +1,25 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///schemas/state/update.schema.json"
+  "$id": "file:///schemas/state/update.schema.json",
+  "title": "State Update",
+  "description": "The pod's current state. Encoded as [state].",
+  "type": "array",
+
+  "prefixItems": [{ "title": "state", "$ref": "#/$defs/state" }],
+  "items": false,
+  "minItems": 1,
+
+  "$defs": {
+    "state": {
+      "oneOf": [
+        { "const": 0, "title": "IdleState" },
+        { "const": 1, "title": "SetupMotor" },
+        { "const": 2, "title": "Precharge" },
+        { "const": 3, "title": "ReadyForPropulsion" },
+        { "const": 4, "title": "Accelerate" },
+        { "const": 5, "title": "Brake" },
+        { "const": 6, "title": "Stopped" }
+      ]
+    }
+  }
 }

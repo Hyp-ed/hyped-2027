@@ -1,4 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///schemas/logs/logs.schema.json"
+  "$id": "file:///schemas/logs/logs.schema.json",
+  "title": "Logs",
+  "description": "Raw log output from the pod. Encoded as [log].",
+  "type": "array",
+
+  "prefixItems": [{ "title": "log", "$ref": "../common.schema.json#bytes" }],
+  "items": false,
+  "minItems": 1
 }
