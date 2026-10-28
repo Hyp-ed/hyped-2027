@@ -1,4 +1,32 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///schemas/control-status/status.schema.json"
+  "$id": "file:///schemas/control-status/status.schema.json",
+  "title": "ControlStatus",
+  "description": "Which state transitions the pod is ready for. Encoded as an array of 4 booleans; each index matches the event's number.",
+  "type": "array",
+
+  "prefixItems": [
+    {
+      "title": "ReadyToSetupMotor",
+      "description": "Ready to transition",
+      "type": "boolean"
+    },
+    {
+      "title": "ReadyToPrecharge",
+      "description": "Ready to transition",
+      "type": "boolean"
+    },
+    {
+      "title": "ReadyToReadyForPropulsion",
+      "description": "Ready to transition",
+      "type": "boolean"
+    },
+    {
+      "title": "ReadyToAccelerate",
+      "description": "Ready to transition",
+      "type": "boolean"
+    }
+  ],
+  "items": false,
+  "minItems": 4
 }
