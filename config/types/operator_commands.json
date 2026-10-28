@@ -1,9 +1,0 @@
-[
-  { "PrechargeOperatorCommand": 0 },
-  { "StartRunOperatorCommand": 1 },
-  { "ReadyForPropulsionOperatorCommand": 2 }
-  { "AccelerateOperatorCommand": 3 },
-  { "BrakeOperatorCommand": 4 },
-  { "IdleOperatorCommand": 5 },
-  { "EmergencyStopOperatorCommand": 6 }
-]

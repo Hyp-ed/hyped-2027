@@ -1,7 +1,0 @@
-payload = [
-    corrected: uint,
-    status: uint,
-    measurement_counter: uint,
-    warnings_and_alarms: uint,
-    device_activity: uint,
-]
