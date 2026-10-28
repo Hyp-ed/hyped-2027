@@ -3,5 +3,5 @@
   "$id": "file:///schemas/logs/logs.schema.json",
   "title": "Logs",
   "description": "Raw log output from the pod. Encoded as a byte string.",
-  "$ref": "../common.schema.json#bytes"
+  "$ref": "../common.schema.json#/$defs/bytes"
 }

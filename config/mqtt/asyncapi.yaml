@@ -1,6 +1,6 @@
 # TODO: motor command, HVAL green & right light status, faults
 # TODO: operations
-asyncapi: 3.0.0
+asyncapi: 3.1.0
 info:
   title: MQTT messages from the Pod to base station
   version: 1.0.0
@@ -17,7 +17,7 @@ channels:
     parameters:
       podId:
         description: the id of the pod
-        default: 0
+        default: "0"
     messages:
       request:
         contentType: application/cbor
@@ -37,7 +37,7 @@ channels:
     parameters:
       podId:
         description: the id of the pod.
-        default: 0
+        default: "0"
     messages:
       update:
         contentType: application/cbor
@@ -51,7 +51,7 @@ channels:
     parameters:
       podId:
         description: the id of the pod.
-        default: 0
+        default: "0"
     messages:
       logs:
         contentType: application/cbor
@@ -65,7 +65,7 @@ channels:
     parameters:
       podId:
         description: the id of the pod.
-        default: 0
+        default: "0"
     messages:
       warnings:
         contentType: application/cbor
@@ -79,7 +79,7 @@ channels:
     parameters:
       podId:
         description: the id of the pod.
-        default: 0
+        default: "0"
     messages:
       faults:
         contentType: application/cbor
@@ -93,7 +93,7 @@ channels:
     parameters:
       podId:
         description: the id of the pod.
-        default: 0
+        default: "0"
     messages:
       status:
         contentType: application/cbor
@@ -107,7 +107,7 @@ channels:
     parameters:
       podId:
         description: the id of the pod.
-        default: 0
+        default: "0"
     messages:
       ping:
         contentType: application/cbor
@@ -127,10 +127,10 @@ channels:
     parameters:
       podId:
         description: the id of the pod.
-        default: 0
+        default: "0"
       measurementId:
         description: the id of the measurement.
-        default: 0
+        default: "0"
     messages:
       hvalGreenLightStatus:
         title: HVAL Green Light Status
@@ -194,7 +194,7 @@ channels:
     parameters:
       podId:
         description: the id of the pod.
-        default: 0
+        default: "0"
     messages:
       command:
         contentType: application/cbor

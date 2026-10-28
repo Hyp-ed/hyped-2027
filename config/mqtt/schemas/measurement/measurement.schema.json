@@ -49,23 +49,23 @@
       "prefixItems": [
         {
           "title": "corrected",
-          "$ref": "../common.schema.json#uint"
+          "$ref": "../common.schema.json#/$defs/uint"
         },
         {
           "title": "status",
-          "$ref": "../common.schema.json#uint"
+          "$ref": "../common.schema.json#/$defs/uint"
         },
         {
           "title": "measurement_counter",
-          "$ref": "../common.schema.json#uint"
+          "$ref": "../common.schema.json#/$defs/uint"
         },
         {
           "title": "warnings_and_alarms",
-          "$ref": "../common.schema.json#uint"
+          "$ref": "../common.schema.json#/$defs/uint"
         },
         {
           "title": "device_activity",
-          "$ref": "../common.schema.json#uint"
+          "$ref": "../common.schema.json#/$defs/uint"
         }
       ],
       "items": false,
@@ -76,19 +76,19 @@
       "prefixItems": [
         {
           "title": "voltage",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "current",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "max_cell_mv",
-          "$ref": "../common.schema.json#uint"
+          "$ref": "../common.schema.json#/$defs/uint"
         },
         {
           "title": "min_cell_mv",
-          "$ref": "../common.schema.json#uint"
+          "$ref": "../common.schema.json#/$defs/uint"
         },
         {
           "title": "temperatures_c",
@@ -114,7 +114,7 @@
           "title": "cell_voltages_mv",
           "type": "array",
           "items": {
-            "$ref": "../common.schema.json#uint"
+            "$ref": "../common.schema.json#/$defs/uint"
           },
           "minItems": 16,
           "maxItems": 16
@@ -128,99 +128,99 @@
       "prefixItems": [
         {
           "title": "sns1",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns2",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns3",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns4",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns5",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns6",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns7",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns8",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns9",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns10",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns11",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns12",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns13",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns14",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns15",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns16",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns17",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns18",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns19",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns20",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns21",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns22",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns23",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns24",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         }
       ],
       "items": false,
@@ -231,22 +231,22 @@
       "prefixItems": [
         {
           "title": "sns1",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns2",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         },
         {
           "title": "sns3",
-          "$ref": "../common.schema.json#float32"
+          "$ref": "../common.schema.json#/$defs/float32"
         }
       ],
       "items": false,
       "minItems": 3
     },
     "motorControllerCmd": {
-      "$ref": "../common.schema.json#uint"
+      "$ref": "../common.schema.json#/$defs/uint"
     }
   }
 }
