@@ -3,46 +3,59 @@
   "$id": "file:///schemas/measurement/measurement.schema.json",
   "title": "Measurement",
   "description": "A sensor reading from the pod. The measurement ID is in the topic (hyped/{podId}/measurement/{measurementId}), and it decides which payload shape applies.",
-  "anyOf": [
+
+  "type": "array",
+  "prefixItems": [
     {
-      "title": "HVAL Green Light Status",
-      "description": "Payload for measurementId 100. No CDDL definition yet."
+      "title": "Time of data",
+      "description": "the time at which the data was acquired",
+      "$ref": "../common.schema.json#/$defs/uint"
     },
     {
-      "title": "HVAL Red Light Status",
-      "description": "Payload for measurementId 200. No CDDL definition yet."
-    },
-    {
-      "title": "IMDStatus",
-      "description": "Payload for measurementId 300.",
-      "$ref": "#/$defs/imdStatus"
-    },
-    {
-      "title": "HV BMS Status",
-      "description": "Payload for measurementId 400.",
-      "$ref": "#/$defs/bmsStatus"
-    },
-    {
-      "title": "LV BMS Status",
-      "description": "Payload for measurementId 500.",
-      "$ref": "#/$defs/bmsStatus"
-    },
-    {
-      "title": "TempSensors",
-      "description": "Payload for measurementId 601.",
-      "$ref": "#/$defs/tempSensors"
-    },
-    {
-      "title": "PressureSensors",
-      "description": "Payload for measurementId 602.",
-      "$ref": "#/$defs/pressureSensors"
-    },
-    {
-      "title": "MotorControllerCmd",
-      "description": "Payload for measurementId 603.",
-      "$ref": "#/$defs/motorControllerCmd"
+      "anyOf": [
+        {
+          "title": "HVAL Green Light Status",
+          "description": "Payload for measurementId 100. No CDDL definition yet."
+        },
+        {
+          "title": "HVAL Red Light Status",
+          "description": "Payload for measurementId 200. No CDDL definition yet."
+        },
+        {
+          "title": "IMDStatus",
+          "description": "Payload for measurementId 300.",
+          "$ref": "#/$defs/imdStatus"
+        },
+        {
+          "title": "HV BMS Status",
+          "description": "Payload for measurementId 400.",
+          "$ref": "#/$defs/bmsStatus"
+        },
+        {
+          "title": "LV BMS Status",
+          "description": "Payload for measurementId 500.",
+          "$ref": "#/$defs/bmsStatus"
+        },
+        {
+          "title": "TempSensors",
+          "description": "Payload for measurementId 601.",
+          "$ref": "#/$defs/tempSensors"
+        },
+        {
+          "title": "PressureSensors",
+          "description": "Payload for measurementId 602.",
+          "$ref": "#/$defs/pressureSensors"
+        },
+        {
+          "title": "MotorControllerCmd",
+          "description": "Payload for measurementId 603.",
+          "$ref": "#/$defs/motorControllerCmd"
+        }
+      ]
     }
   ],
+  "items": false,
+  "minItems": 2,
   "$defs": {
     "imdStatus": {
       "type": "array",

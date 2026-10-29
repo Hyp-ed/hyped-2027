@@ -1,4 +1,36 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///schemas/controls/command.schema.json"
+  "$id": "file:///schemas/controls/command.schema.json",
+  "title": "Operator Command",
+  "description": "Operator commands that the base station sends to the pod",
+  "anyOf": [
+    {
+      "title": "PrechargeOperatorCommand",
+      "const": 0
+    },
+    {
+      "title": "StartRunOperatorCommand",
+      "const": 1
+    },
+    {
+      "title": "ReadyForPropulsionOperatorCommand",
+      "const": 2
+    },
+    {
+      "title": "AccelerateOperatorCommand",
+      "const": 3
+    },
+    {
+      "title": "BrakeOperatorCommand",
+      "const": 4
+    },
+    {
+      "title": "EmergencyStopOperatorCommand",
+      "const": 5
+    },
+    {
+      "title": "IdleOperatorCommand",
+      "const": 6
+    }
+  ]
 }
