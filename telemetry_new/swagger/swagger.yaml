@@ -61,18 +61,18 @@ components:
                 - value
                 - rangeCondition
                 - monitoringResult
-        required:
-          - acknowledged
-          - currentValueInfo
-          - id
-          - name
-          - namespace
-          - seqNum
-          - severity
-          - shelved
-          - shortDescription
-          - triggerTime
-          - triggerValueInfo
+          required:
+            - acknowledged
+            - currentValueInfo
+            - id
+            - name
+            - namespace
+            - seqNum
+            - severity
+            - shelved
+            - shortDescription
+            - triggerTime
+            - triggerValueInfo
       required:
         - type
         - fault
@@ -498,7 +498,7 @@ paths:
             application/json:
               schema:
                 type: object 
-                $ref: "#/components/schemas/MeasurementReadingSchema"
+                $ref: "#/components/schemas/OpenMctFault"
     tags:
       - Websocket
       - Auth required
