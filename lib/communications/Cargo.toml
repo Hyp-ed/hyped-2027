@@ -11,6 +11,7 @@ embassy-executor = { git = "https://github.com/embassy-rs/embassy", rev = "1c466
 
 hyped_can = { path = "../io/hyped_can" }
 hyped_core = { path = "../core" }
+minicbor = { version = "2.3.1", features = ["minicbor-derive"] }
 
 [dev-dependencies]
 defmt = { version = "0.3", features = ["unstable-test"] }
