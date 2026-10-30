@@ -10,6 +10,85 @@ servers:
 
 components:
   schemas:
+    OpenMctFault:
+      properties:
+        type:
+          type: string
+        fault:
+          type: object
+          properties:
+            acknowledged: 
+              type: boolean
+            currentValueInfo:
+              type: object
+              properties:
+                value: 
+                  type: number
+                rangeCondition:
+                  type: string
+                monitoringResult:
+                  type: string
+              required:
+                - value
+                - rangeCondition
+                - monitoringResult
+            id:
+              type: string
+            name:
+              type: string
+            namespace:
+              type: string
+            seqNum:
+              type: number
+            severity:
+              type: string
+            shelved:
+              type: boolean
+            shortDescription:
+              type: string
+            triggerTime:
+              type: string
+            triggerValueInfo:
+              type: object
+              properties:
+                value:
+                  type: number
+                rangeCondition:
+                  type: string
+                monitoringResult:
+                  type: string
+              required:
+                - value
+                - rangeCondition
+                - monitoringResult
+          required:
+            - acknowledged
+            - currentValueInfo
+            - id
+            - name
+            - namespace
+            - seqNum
+            - severity
+            - shelved
+            - shortDescription
+            - triggerTime
+            - triggerValueInfo
+      required:
+        - type
+        - fault
+    MeasurementReadingSchema:
+      properties:
+        podId:
+          type: number
+        measurementKey:
+          type: string
+        timestamp:
+          type: string
+        value:
+          type: number
+      required:
+        - podId
+        - measurementKey
     limit:
       properties:
         low:
@@ -390,3 +469,52 @@ paths:
     tags:
       - PodControlsModule
       - Auth required
+
+  /protected-api/openmct/data/realtime:
+    get:
+      summary: Subscribe/unsubscribe to measurements & receive specific measurements (ping this every 100ms)
+      responses:
+        "200":
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  $ref: "#/components/schemas/MeasurementReadingSchema"
+    tags:
+      - Websocket
+      - Auth required
+      - OpenMCTDataModule
+
+  /protected-api/openmct/faults/realtime:
+    get:
+      summary: Subscribe/unsubscribe to fault & receive faults (ping this every 100ms)
+      responses:
+        "200":
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: object 
+                $ref: "#/components/schemas/OpenMctFault"
+    tags:
+      - Websocket
+      - Auth required
+      - FaultModule
+  /protected-api/live-logs:
+    get:
+      summary: Subscribe to logs (ping this every 100ms)
+      responses:
+        "200":
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: string
+    tags:
+      - Websocket
+      - Auth required
+      - AppModule
+
