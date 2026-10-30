@@ -56,10 +56,10 @@ path = "src/bin/boards/telemetry.rs"
 name = "pneumatics"
 path = "src/bin/boards/pneumatics.rs"
 
-
 [[bin]]                                                                                   
 name = "high_power"
 path = "src/bin/boards/high_power.rs"
+
 [[bin]]
 name = "motor_control"
 path = "src/bin/boards/motor_control.rs"

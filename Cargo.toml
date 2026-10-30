@@ -7,7 +7,7 @@ members = [
   "lib/motors",
   "lib/sensors",
   "lib/state_machine",
-  "lib/communications",
+  "lib/communications",  
 ]
 exclude = [
   "boards/stm32l476rg",
