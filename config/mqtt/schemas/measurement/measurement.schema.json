@@ -14,12 +14,8 @@
     {
       "anyOf": [
         {
-          "title": "HVAL Green Light Status",
+          "title": "HVAL Status",
           "description": "Payload for measurementId 100. No CDDL definition yet."
-        },
-        {
-          "title": "HVAL Red Light Status",
-          "description": "Payload for measurementId 200. No CDDL definition yet."
         },
         {
           "title": "IMDStatus",
@@ -57,6 +53,24 @@
   "items": false,
   "minItems": 2,
   "$defs": {
+    "hvalStatus": {
+      "title": "array",
+      "prefixItems": [
+        {
+          "title": "measurement",
+          "description": "measurement of a current",
+          "$ref": "../common.schema.json#/$defs/float32"
+        },
+        {
+          "title": "is_SDC_open",
+          "description": "SDC status",
+          "type": "boolean"
+        }
+      ],
+      "items": false,
+      "minItems": 5
+    },
+
     "imdStatus": {
       "type": "array",
       "prefixItems": [
@@ -202,38 +216,6 @@
         {
           "title": "sns16",
           "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns17",
-          "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns18",
-          "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns19",
-          "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns20",
-          "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns21",
-          "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns22",
-          "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns23",
-          "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns24",
-          "$ref": "../common.schema.json#/$defs/float32"
         }
       ],
       "items": false,
@@ -248,10 +230,6 @@
         },
         {
           "title": "sns2",
-          "$ref": "../common.schema.json#/$defs/float32"
-        },
-        {
-          "title": "sns3",
           "$ref": "../common.schema.json#/$defs/float32"
         }
       ],

@@ -131,8 +131,7 @@ channels:
       measurementId:
         description: |
           the id of the measurement.
-          100: HVAL Green Light Status
-          200: HVAL Red Light Status
+          100: HVAL Status
           300: IMDStatus
           400: HV BMS Status
           500: LV BMS Status
@@ -141,7 +140,6 @@ channels:
           603: MotorControllerCmd
         enum:
           - "100"
-          - "200"
           - "300"
           - "400"
           - "500"
@@ -149,14 +147,14 @@ channels:
           - "602"
           - "603"
     messages:
-      hvalGreenLightStatus:
+      hvalStatus:
         title: HVAL Green Light Status
-        summary: Sent when measurementId is 100. No CDDL definition yet.
+        summary: Sent when measurementId is 100. 
         contentType: application/cbor
-      hvalRedLightStatus:
-        title: HVAL Red Light Status
-        summary: Sent when measurementId is 200. No CDDL definition yet.
-        contentType: application/cbor
+        payload:
+          schemaFormat: "application/json"
+          schema:
+            $ref: "./schemas/measurement/measurement.schema.json#/$defs/hvalStatus"
       imdStatus:
         title: IMDStatus
         summary: Sent when measurementId is 300.
