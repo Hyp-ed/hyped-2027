@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "file:///schemas/common.schema.json",
+  "title": "Common types",
+  "description": "Shared numeric and binary types, aligned with CBOR/CDDL ranges.",
+  "$defs": {
+    "uint": {
+      "$anchor": "uint",
+      "description": "Unsigned integer (CBOR major type 0).",
+      "type": "integer",
+      "minimum": 0
+    },
+    "uint16": {
+      "$anchor": "uint16",
+      "description": "Unsigned 16-bit integer: 0 to 65535.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535
+    },
+    "uint32": {
+      "$anchor": "uint32",
+      "description": "Unsigned 32-bit integer: 0 to 4294967295.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4294967295
+    },
+    "nint": {
+      "$anchor": "nint",
+      "description": "Negative integer (CBOR major type 1): -1 or less.",
+      "type": "integer",
+      "maximum": -1
+    },
+    "nint16": {
+      "$anchor": "nint16",
+      "description": "Negative integer whose CBOR argument fits in 16 bits: -65536 to -1.",
+      "type": "integer",
+      "minimum": -65536,
+      "maximum": -1
+    },
+    "nint32": {
+      "$anchor": "nint32",
+      "description": "Negative integer whose CBOR argument fits in 32 bits: -4294967296 to -1.",
+      "type": "integer",
+      "minimum": -4294967296,
+      "maximum": -1
+    },
+    "float32": {
+      "$anchor": "float32",
+      "description": "Number within IEEE 754 single-precision range. Precision is not enforced.",
+      "type": "number",
+      "minimum": -3.4028234663852886e38,
+      "maximum": 3.4028234663852886e38
+    },
+    "bytes": {
+      "$anchor": "bytes",
+      "description": "Byte array as a list of integers 0 to 255.",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      }
+    }
+  }
+}

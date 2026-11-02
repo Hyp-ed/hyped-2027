@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "file:///schemas/register/response.schema.json",
+  "title": "Registration Response",
+  "description": "The base station's response. Encoded as the status code.",
+
+  "anyOf": [
+    {
+      "const": 0,
+      "title": "SUCCESS",
+      "description": "Registration accepted."
+    },
+    {
+      "const": 1,
+      "title": "REPEATED_NAME",
+      "description": "Name already registered."
+    }
+  ]
+}

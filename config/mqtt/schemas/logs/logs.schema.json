@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "file:///schemas/logs/logs.schema.json",
+  "title": "Logs",
+  "description": "Raw log output from the pod. Encoded as a byte string.",
+  "$ref": "../common.schema.json#/$defs/bytes"
+}

@@ -114,3 +114,7 @@ To run the linter and formatter, use the following commands:
 - `pnpm format` to format the code, or `pnpm format:check` to check for formatting errors but not format.
 
 Like our Rust code, we have a GitHub Actions workflow to check that these tools pass on every pull request.
+
+### MQTT
+
+npm install -g @asyncapi/cli
