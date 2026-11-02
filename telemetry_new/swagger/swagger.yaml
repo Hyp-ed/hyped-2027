@@ -295,6 +295,20 @@ paths:
                 example: pong
           
     tags:
+      - testing
+  /protected-api/ping:
+    get:
+      summary: return pong in return if it accept authentication
+      responses:
+        "200":
+          description: return ping
+          content:
+            plain/text:
+              schema:
+                type: string
+                example: pong
+          
+    tags:
       - Auth required
       - testing
 
