@@ -1,6 +1,6 @@
 """Shared helper for cocotb testbenches.
 
-Builds a module with Verilator and runs the cocotb tests in a tb/test_<name>.py
+Builds a module with Verilator and runs the cocotb tests in a tb/tests/test_<name>.py
 file. Each test file calls run() from a small pytest function, so the same
 file holds both the tests and the instructions for running them.
 

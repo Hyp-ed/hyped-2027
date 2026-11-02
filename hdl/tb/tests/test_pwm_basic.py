@@ -7,6 +7,7 @@ pytest runs, and it builds the design once per WIDTH value.
 Run with:  make cocotb TOP=pwm_basic
 """
 
+
 import cocotb
 import pytest
 from cocotb.clock import Clock

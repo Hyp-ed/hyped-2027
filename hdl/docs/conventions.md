@@ -3,7 +3,9 @@
 ## Files and modules
 - One module per file. The file is named after the module: `rtl/<name>.v`.
   The Makefile relies on this to find submodules.
-- A module's testbench is `tb/tb_<name>.cpp`.
+- A module's testbench is `tb/tests/test_<name>.py` (cocotb) or
+  `tb/tests/tb_<name>.cpp` (C++). Reference models go in `tb/models/`; other
+  `tb/tests/test_*.py` files are plain Python unit tests.
 - Every file starts with `` `default_nettype none `` and ends with
   `` `default_nettype wire ``. This turns a misspelt signal name into an
   error instead of silently creating a new wire.

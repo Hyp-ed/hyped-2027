@@ -7,14 +7,23 @@ Verilog designs for the HYPED FPGA team, simulated with
 
 ```
 hdl/
-├── Makefile        build, run, lint, view waveforms
-├── rtl/pwm.v       the hardware design (Verilog)
-└── tb/tb_pwm.cpp   the testbench (C++): drives the design and checks its output
+├── Makefile               build, lint, test, view waveforms (run `make list`)
+├── requirements.txt       pinned Python tools (cocotb, pytest); `make setup`
+├── docs/                  conventions, verification plans, decisions
+├── rtl/                   the hardware: one module per file, <name>.v or <name>.sv
+│   └── *_pkg.sv           SystemVerilog packages (shared formats and helpers)
+└── tb/
+    ├── cocotb_runner.py   shared helper that builds and runs cocotb testbenches
+    ├── models/            Python reference models: what each module should output
+    └── tests/             every test:
+        ├── test_<module>.py   cocotb testbench for rtl/<module>
+        ├── tb_<module>.cpp    C++ testbench for rtl/<module>
+        └── test_*.py          other names: plain Python unit tests (e.g. of a model)
 ```
 
-`rtl/pwm.v` is a PWM generator: a square wave whose duty cycle (the fraction of
-time it's high) is set by an input. It's the first building block of the
-levitation current-control project.
+`rtl/pwm_basic.v` is the simple PWM generator used as workshop material: a
+square wave whose duty cycle (the fraction of time it's high) is set by an
+input. `rtl/pwm.v` is the full version used in the current-control project.
 
 ## How it works
 
@@ -114,13 +123,13 @@ press `Cmd+Shift+.` in the file picker to show hidden folders such as `.cache`.
 
 ## Demo script
 
-1. Open `rtl/pwm.v` and walk through it: inputs and outputs, the counter, the
-   comparison, and why duty is latched once per period.
-2. Open `tb/tb_pwm.cpp`: creating the model, `tick()`, the reset, the test loop
-   and the PASS/FAIL check.
-3. Run `make` and show all tests passing.
-4. Run `make waves` and look at the signals.
-5. **Break it on purpose:** in `pwm.v`, change `(counter < duty_latched)` to
+1. Open `rtl/pwm_basic.v` and walk through it: inputs and outputs, the counter,
+   the comparison, and why duty is latched once per period.
+2. Open `tb/tests/tb_pwm_basic.cpp`: creating the model, `tick()`, the reset,
+   the test loop and the PASS/FAIL check.
+3. Run `make sim TOP=pwm_basic` and show all tests passing.
+4. Run `make waves TOP=pwm_basic` and look at the signals.
+5. **Break it on purpose:** in `pwm_basic.v`, change `(counter < duty_latched)` to
    `(counter <= duty_latched)` and run `make` again. Every test fails with one
    cycle too many, which is an off-by-one error. Change it back and they pass.
    This is the point of a self-checking testbench: the bug is caught
@@ -128,9 +137,11 @@ press `Cmd+Shift+.` in the file picker to show hidden folders such as `.cache`.
 
 ## Adding a new module
 
-1. Put the design in `rtl/<name>.v` and the testbench in `tb/tb_<name>.cpp`.
-2. In the `Makefile`, set `TOP`, `RTL` and `TB` to the new files. The generated
-   class is called `V<name>`, so include `V<name>.h` in the testbench.
-3. Run `make lint` first, then `make`.
-
-Once there are several modules, the Makefile will grow a target per module.
+1. Put the design in `rtl/<name>.sv` (or `.v`), named after the module.
+2. Put its cocotb testbench in `tb/tests/test_<name>.py`, ending with a pytest
+   function that calls `run("<name>", "test_<name>")`; see `test_pwm.py`.
+   If it needs a reference model, put that in `tb/models/<name>_model.py` and
+   import it with `from models.<name>_model import ...`.
+3. Run `make lint TOP=<name>`, then `make cocotb TOP=<name>`, then `make`.
+   The Makefile finds new modules and testbenches by their names, so there's
+   nothing to edit in it.

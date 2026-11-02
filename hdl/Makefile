@@ -5,7 +5,9 @@
 #   make lint  TOP=<name>    lint one module
 #   make waves TOP=<name>    open one module's C++ testbench waveform in Surfer
 #   make cocotb TOP=<name>   run one module's cocotb (Python) testbench
-#   make test-all            run every testbench (C++ and cocotb), report which failed
+#   make test-all            run every testbench (C++ and cocotb) and model test,
+#                            report which failed
+#   make model-tests         run the Python unit tests of the reference models
 #   make lint-all            lint every module in rtl/
 #   make list                show the modules and testbenches found
 #   make clean               delete everything generated
@@ -16,7 +18,10 @@
 #     or rtl/<name>.sv (SystemVerilog)
 #   - SystemVerilog packages are named rtl/<name>_pkg.sv; every package is
 #     compiled ahead of the module, so any module can import any package
-#   - a module's testbench is tb/tb_<name>.cpp (C++) or tb/test_<name>.py (cocotb)
+#   - a module's testbench is tb/tests/tb_<name>.cpp (C++) or
+#     tb/tests/test_<name>.py (cocotb)
+#   - any other tb/tests/test_*.py is a plain Python unit test (e.g. of a
+#     reference model in tb/models/), run by `make model-tests`
 # Submodules are found automatically in rtl/ (Verilator's -y option).
 #
 # Run from inside the hdl/ folder.
@@ -25,8 +30,12 @@ TOP ?= pwm
 
 PKGS    := $(sort $(wildcard rtl/*_pkg.sv))
 MODULES := $(sort $(basename $(notdir $(filter-out $(PKGS),$(wildcard rtl/*.v rtl/*.sv)))))
-TESTS   := $(patsubst tb/tb_%.cpp,%,$(wildcard tb/tb_*.cpp))
-COCOTB  := $(patsubst tb/test_%.py,%,$(wildcard tb/test_*.py))
+TESTS   := $(patsubst tb/tests/tb_%.cpp,%,$(wildcard tb/tests/tb_*.cpp))
+# cocotb testbenches are the test_<name>.py files whose <name> is an RTL module;
+# the rest are plain Python unit tests
+PY_TESTS    := $(patsubst tb/tests/test_%.py,%,$(wildcard tb/tests/test_*.py))
+COCOTB      := $(filter $(MODULES),$(PY_TESTS))
+MODEL_TESTS := $(addprefix tb/tests/test_,$(addsuffix .py,$(filter-out $(MODULES),$(PY_TESTS))))
 
 # Use the project's Python environment if `make setup` has created it
 PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
@@ -52,18 +61,18 @@ TOP_SRCS  := $(addprefix $(SRC)/,$(PKGS) $(TOP_FILE))
 TOP_DIR   := $(BUILD)/$(TOP)
 TOP_EXE   := $(TOP_DIR)/obj_dir/V$(TOP)
 
-.PHONY: all sim lint waves cocotb test-all lint-all list clean setup check-top
+.PHONY: all sim lint waves cocotb model-tests test-all lint-all list clean setup check-top
 
 all: lint-all test-all
 
 check-top:
 	@test -n "$(TOP_FILE)" || { echo "No rtl/$(TOP).v or rtl/$(TOP).sv. Modules: $(MODULES)"; exit 1; }
 
-$(TOP_EXE): $(RTL_FILES) tb/tb_$(TOP).cpp
+$(TOP_EXE): $(RTL_FILES) tb/tests/tb_$(TOP).cpp
 	@mkdir -p $(TOP_DIR)
 	@if [ "$(SRC)" != "." ]; then ln -sfn "$(CURDIR)" "$(SRC)"; fi
 	$(VERILATOR) $(SIM_FLAGS) --Mdir $(TOP_DIR)/obj_dir --top-module $(TOP) \
-		$(TOP_SRCS) $(SRC)/tb/tb_$(TOP).cpp
+		$(TOP_SRCS) $(SRC)/tb/tests/tb_$(TOP).cpp
 
 # Run from inside the module's build folder so waves.vcd is written there
 sim: check-top $(TOP_EXE)
@@ -79,10 +88,14 @@ waves: check-top
 
 # Waveforms land in $(BUILD)/cocotb/<name>_<parameters>/dump.vcd
 cocotb: check-top
-	@test -f tb/test_$(TOP).py || { echo "No tb/test_$(TOP).py. cocotb testbenches: $(COCOTB)"; exit 1; }
+	@test -f tb/tests/test_$(TOP).py || { echo "No tb/tests/test_$(TOP).py. cocotb testbenches: $(COCOTB)"; exit 1; }
 	@mkdir -p $(BUILD)
 	@if [ "$(SRC)" != "." ]; then ln -sfn "$(CURDIR)" "$(SRC)"; fi
-	HDL_BUILD="$(BUILD)" HDL_SRC="$(SRC)" $(PYTHON) -m pytest tb/test_$(TOP).py
+	HDL_BUILD="$(BUILD)" HDL_SRC="$(SRC)" $(PYTHON) -m pytest tb/tests/test_$(TOP).py
+
+model-tests:
+	@if [ -n "$(MODEL_TESTS)" ]; then $(PYTHON) -m pytest -q $(MODEL_TESTS); \
+	else echo "No model tests."; fi
 
 test-all:
 	@failed=""; \
@@ -94,6 +107,8 @@ test-all:
 		echo "=== $$t (cocotb)"; \
 		$(MAKE) --no-print-directory cocotb TOP=$$t || failed="$$failed $$t(cocotb)"; \
 	done; \
+	echo "=== reference model tests"; \
+	$(MAKE) --no-print-directory model-tests || failed="$$failed model-tests"; \
 	echo; \
 	if [ -n "$$failed" ]; then echo "FAILED:$$failed"; exit 1; fi; \
 	echo "All testbenches passed ($(words $(TESTS)) C++, $(words $(COCOTB)) cocotb)."
@@ -113,6 +128,7 @@ list:
 	@echo "Packages:    $(notdir $(PKGS))"
 	@echo "C++ tests:   $(TESTS)"
 	@echo "cocotb:      $(COCOTB)"
+	@echo "Model tests: $(notdir $(MODEL_TESTS))"
 	@echo "Python:      $(PYTHON)"
 	@echo "Build dir:   $(BUILD)"
 
