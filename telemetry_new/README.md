@@ -15,7 +15,7 @@
 
 To run the telemetry backend, frontend and swagger docs
 
-`docker compose up -d`
+`docker compose up -d --env-file=./test.env`
 
 To stop all of them:
 
