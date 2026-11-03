@@ -2,14 +2,21 @@
 use std::os::unix::process::CommandExt;
 use std::{
     io,
+    net::TcpStream,
     process::{Child, Command},
     thread,
     time::{Duration, Instant},
 };
 
 use clap::Parser;
-use qtbridge::{QApp, qobject};
-use telnet::Telnet;
+use qtbridge::QApp;
+
+use crate::backend::Backend;
+
+mod backend;
+mod monitor;
+mod terminal;
+mod uart;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -17,21 +24,9 @@ struct Args {}
 
 const MONITOR_PORT: u16 = 1234;
 const MONITOR_STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
-const TELNET_BUFFER_SIZE: usize = 4096;
 
-#[derive(Default)]
-pub struct Backend {}
-
-#[qobject(Singleton)]
-impl Backend {
-    #[qslot]
-    fn say_hello(&self) {
-        println!("Hello World");
-    }
-}
-
-fn connect_monitor() -> io::Result<Telnet> {
-    Telnet::connect(("127.0.0.1", MONITOR_PORT), TELNET_BUFFER_SIZE)
+fn connect_monitor() -> io::Result<TcpStream> {
+    TcpStream::connect(("127.0.0.1", MONITOR_PORT))
 }
 
 /// Renode's launcher script doesn't `exec` into dotnet, so the actual simulator is a grandchild
@@ -71,7 +66,7 @@ impl Renode {
         Self(cmd.spawn().expect("Didn't spawn renode successfully"))
     }
 
-    fn wait_for_monitor(&mut self) -> Telnet {
+    fn wait_for_monitor(&mut self) -> TcpStream {
         let deadline = Instant::now() + MONITOR_STARTUP_TIMEOUT;
         loop {
             match connect_monitor() {
@@ -99,7 +94,7 @@ impl Drop for Renode {
 fn main() {
     let _args = Args::parse();
 
-    let (_monitor, _renode) = match connect_monitor() {
+    let (monitor, renode) = match connect_monitor() {
         Ok(monitor) => (monitor, None),
         Err(_) => {
             let mut renode = Renode::spawn();
@@ -116,8 +111,12 @@ fn main() {
         }
     };
 
-    QApp::new()
-        .register::<Backend>()
+    let mut app = QApp::new();
+    let backend = Backend::new(monitor);
+    app.set_initial_object("backend", backend)
         .load_qml(include_bytes!("qml/main.qml"))
         .run();
+
+    // Closing Renode wakes the UART threads, which need the QApp to still exist to post to
+    drop(renode);
 }

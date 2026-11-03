@@ -846,7 +846,6 @@ dependencies = [
  "hyped_communications",
  "libc",
  "qtbridge",
- "telnet",
 ]
 
 [[package]]
@@ -1288,12 +1287,6 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
-
-[[package]]
-name = "telnet"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01b97995bb05d87c31d04870a7b5393228017d12971d446e30d0739f484c5968"
 
 [[package]]
 name = "termcolor"
