@@ -23,7 +23,6 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=example
       - POSTGRES_DB=user
-      - POSTGRES_PORT=5432
 
   db:
     image: postgres
@@ -34,7 +33,6 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=example
       - POSTGRES_DB=user
-      - POSTGRES_PORT=5432
 
   adminer:
     image: msav/adminer-autologin:latest
