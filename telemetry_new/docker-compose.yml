@@ -1,3 +1,4 @@
+# Warning this is a testing docker-compose file, DO NOT USE THIS IN PRODUCTION
 services:
   swagger-ui:
     ports:
@@ -7,12 +8,41 @@ services:
     volumes:
       - ./swagger:/usr/share/nginx/html/swagger
     image: docker.swagger.io/swaggerapi/swagger-ui
+
   air:
-      stdin_open: true
-      tty: true
-      working_dir: /go/src/hyped/backend_telemetry
-      volumes:
-          - ./backend:/go/src/hyped/backend_telemetry
-      ports:
-          - 8000:8000
-      image: cosmtrek/air:latest
+    stdin_open: true
+    tty: true
+    working_dir: /go/src/hyped/backend_telemetry
+    volumes:
+        - ./backend:/go/src/hyped/backend_telemetry
+    ports:
+        - 8000:8000
+    image: cosmtrek/air:latest
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=user
+
+  db:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=user
+
+  adminer:
+    image: msav/adminer-autologin:latest
+    restart: always
+    ports:
+      - 8090:8080
+    environment:
+      ADMINER_SERVER: db # The hostname of your database container (or service name)
+      ADMINER_DRIVER: pgsql          # Optional: driver type (e.g., server for MySQL, psql for PostgreSQL)
+      ADMINER_USERNAME: user        # Pre-fills the username
+      ADMINER_DB: user          # Pre-fills the database name
+      ADMINER_PASSWORD: example
+      ADMINER_DESIGN: "default"

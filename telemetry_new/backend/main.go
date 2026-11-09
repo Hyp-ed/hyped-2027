@@ -4,9 +4,12 @@ import (
     "log"
     "github.com/gofiber/fiber/v3"
     "github.com/gofiber/fiber/v3/middleware/cors"
+	_ "github.com/lib/pq"
+	// "hyped/backend_telemetry/internal/database"
 )
 
 func main() {
+	// database.Connect(database.PsqlConnectionString())
     app := fiber.New()
 	app.Use(cors.New())
 

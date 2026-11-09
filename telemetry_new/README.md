@@ -13,7 +13,13 @@
 > [!IMPORTANT]
 > Install docker beforehand
 
-To run the telemetry backend, frontend and swagger docs
+To run the development environment that includes:
+
+- Backend (Air - Golang will automatically refresh)
+- Frontend (SOON)
+- Swagger Docs
+- PostgresDB (Store authentication)
+- Adminer (The database management software for **DEBUGGING ONLY**)
 
 `docker compose up -d`
 
