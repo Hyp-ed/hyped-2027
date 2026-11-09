@@ -27,6 +27,7 @@ func ResetUserPassword(id uuid.UUID) (string, error) {
 	return "", errors.New("cannot reset a user's password")
 }
 
-func GetUserByEmail(email string) (*User, error) {
-	return nil, errors.New("cannot get user by email")
+func GetUserByEmail(email string, passwordhash string) (*User, error) {
+	return nil, errors.New("cannot get user by email and password")
 }
+
