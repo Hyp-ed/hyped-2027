@@ -3,12 +3,12 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"hyped/backend_telemetry/internal/errors"
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
-
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 )
 
 func PsqlConnectionString() string {
@@ -23,22 +23,19 @@ func PsqlConnectionString() string {
 	sqlString := fmt.Sprintf("host=%s port=%s user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
-	// fmt.Println(sqlString)
-	// Debug the sqlString
 	return sqlString
 }
 
 func Connect(connectionString string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", connectionString)
 	if err != nil {
-		return nil, err
+		return nil, &errors.DBError{ReasonFrom: "Database Connection Error", DBErrorMessage: err.Error()}
 	}
-
 	// Test the connection
 	if err := db.Ping(); err != nil {
-		return nil, err
+		return nil, &errors.DBError{ReasonFrom: "Database Ping Failed", DBErrorMessage: err.Error()}
 	}
-
-	log.Println("Connected to the database successfully")
+	log.Println("Database connected successfully")
 	return db, nil
 }
+
