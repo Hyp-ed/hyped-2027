@@ -25,6 +25,8 @@ use hyped_i2c_derive::HypedI2c;
 use hyped_spi::{HypedSpi, SpiError};
 use hyped_spi_derive::HypedSpi;
 
+pub mod sdmmc;
+
 #[derive(HypedAdc)]
 pub struct Stm32f767ziAdc<'d, T: Instance> {
     adc: Adc<'d, T>,
