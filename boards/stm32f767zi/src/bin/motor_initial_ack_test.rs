@@ -16,7 +16,7 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{Channel, Receiver},
 };
-use embassy_time::{with_timeout, Duration, Timer};
+use embassy_time::{with_timeout, Duration, Instant, Timer};
 use hyped_can::HypedCanFrame;
 use hyped_motors::{can_open_message::CanOpenMessage, can_open_processor::Messages};
 use panic_probe as _;
@@ -134,30 +134,55 @@ async fn main(spawner: Spawner) {
         .await;
     }
 
-    unwrap!(spawner.spawn(frame_logger(frames)));
     Timer::after(Duration::from_secs(5)).await;
 
-    info!("Sending Preoperational message...");
-    send_motor_message(&mut tx, Messages::EnterPreoperationalState).await;
-    Timer::after(Duration::from_secs(30)).await;
-    wait_after_send().await;
+    // The controller is already pre-operational after sending its bootup frame
+    // info!("Sending Preoperational message...");
+    // send_motor_message(&mut tx, Messages::EnterPreoperationalState).await;
+    // Timer::after(Duration::from_secs(30)).await;
+    // wait_after_send().await;
+
+    info!("Checking for statusword object (0x6041:0)...");
+    let status = sdo_upload(&mut tx, &frames, STATUSWORD_INDEX, 0).await;
+    if status.command == SDO_ABORT {
+        error!(
+            "0x6041:0 does not exist: abort code {=u32:#010x}. Not enabling the drive.",
+            status.data
+        );
+        loop {
+            Timer::after(Duration::from_secs(1)).await;
+        }
+    }
+    let statusword = status.data as u16;
+    info!(
+        "0x6041:0 exists: statusword={=u16:#06x} ({})",
+        statusword,
+        DriveState::decode(statusword)
+    );
 
     info!("Sending Operational message...");
     send_motor_message(&mut tx, Messages::EnterOperationalState).await;
     wait_after_send().await;
 
+    if DriveState::decode(statusword) == DriveState::Fault {
+        info!("Drive is faulted, sending Fault Reset...");
+        set_controlword(&mut tx, &frames, CONTROLWORD_FAULT_RESET).await;
+        wait_for_state(&mut tx, &frames, DriveState::SwitchOnDisabled).await;
+    }
+
     info!("Sending Shutdown message...");
-    send_motor_message(&mut tx, Messages::Shutdown).await;
-    wait_after_send().await;
+    set_controlword(&mut tx, &frames, Messages::Shutdown).await;
+    wait_for_state(&mut tx, &frames, DriveState::ReadyToSwitchOn).await;
 
     info!("Sending Switch On message...");
-    send_motor_message(&mut tx, Messages::SwitchOn).await;
-    wait_after_send().await;
-    Timer::after(Duration::from_secs(30)).await;
+    set_controlword(&mut tx, &frames, Messages::SwitchOn).await;
+    wait_for_state(&mut tx, &frames, DriveState::SwitchedOn).await;
 
     info!("Sending Start Drive message...");
-    send_motor_message(&mut tx, Messages::StartDrive).await;
-    Timer::after(Duration::from_secs(15)).await;
+    set_controlword(&mut tx, &frames, Messages::StartDrive).await;
+    wait_for_state(&mut tx, &frames, DriveState::OperationEnabled).await;
+
+    unwrap!(spawner.spawn(frame_logger(frames)));
 
     info!("Starting motor");
     info!("Incrementing Test Mode Command to 1000...");
@@ -388,6 +413,105 @@ async fn read_sdo_response(frames: &FrameReceiver, index: u16, sub_index: u8) ->
             }
             _ => log_frame("Skipping", &frame),
         }
+    }
+}
+
+const STATUSWORD_INDEX: u16 = 0x6041;
+const STATE_POLL_INTERVAL: Duration = Duration::from_millis(100);
+const STATE_TIMEOUT: Duration = Duration::from_secs(5);
+const CONTROLWORD_FAULT_RESET: CanOpenMessage = CanOpenMessage {
+    id: SDO_TX_ID,
+    command: 0x2B,
+    index: 0x6040,
+    sub_index: 0x00,
+    data: 0x0080,
+};
+
+/// CiA 402 drive states, decoded from the statusword
+#[derive(PartialEq, Clone, Copy, Format)]
+enum DriveState {
+    NotReadyToSwitchOn,
+    SwitchOnDisabled,
+    ReadyToSwitchOn,
+    SwitchedOn,
+    OperationEnabled,
+    QuickStopActive,
+    FaultReactionActive,
+    Fault,
+    Unknown,
+}
+
+impl DriveState {
+    fn decode(statusword: u16) -> Self {
+        match statusword & 0x4F {
+            0x00 => return Self::NotReadyToSwitchOn,
+            0x40 => return Self::SwitchOnDisabled,
+            0x0F => return Self::FaultReactionActive,
+            0x08 => return Self::Fault,
+            _ => {}
+        }
+        match statusword & 0x6F {
+            0x21 => Self::ReadyToSwitchOn,
+            0x23 => Self::SwitchedOn,
+            0x27 => Self::OperationEnabled,
+            0x07 => Self::QuickStopActive,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// Write the controlword and assert the controller acknowledged it
+async fn set_controlword(
+    tx: &mut CanTx<'static>,
+    frames: &FrameReceiver,
+    msg: impl Into<CanOpenMessage>,
+) {
+    let write: CanOpenMessage = msg.into();
+    send_sdo(tx, write.clone()).await;
+    let ack = read_sdo_response(frames, write.index, write.sub_index).await;
+    assert_not_abort(&ack);
+    defmt::assert_eq!(
+        ack.command,
+        SDO_DOWNLOAD_RESPONSE,
+        "Unexpected controlword download response"
+    );
+}
+
+async fn read_statusword(tx: &mut CanTx<'static>, frames: &FrameReceiver) -> u16 {
+    let read = sdo_upload(tx, frames, STATUSWORD_INDEX, 0).await;
+    assert_not_abort(&read);
+    read.data as u16
+}
+
+/// Poll the statusword until the drive reports `expected`, panicking on fault or timeout
+async fn wait_for_state(tx: &mut CanTx<'static>, frames: &FrameReceiver, expected: DriveState) {
+    let deadline = Instant::now() + STATE_TIMEOUT;
+    loop {
+        let statusword = read_statusword(tx, frames).await;
+        let state = DriveState::decode(statusword);
+        if state == expected {
+            info!(
+                "Drive state confirmed: {} (statusword={=u16:#06x})",
+                state, statusword
+            );
+            return;
+        }
+        if matches!(state, DriveState::Fault | DriveState::FaultReactionActive) {
+            defmt::panic!(
+                "Drive faulted while waiting for {}: statusword={=u16:#06x}",
+                expected,
+                statusword
+            );
+        }
+        if Instant::now() >= deadline {
+            defmt::panic!(
+                "Timed out waiting for {}: last state {} (statusword={=u16:#06x})",
+                expected,
+                state,
+                statusword
+            );
+        }
+        Timer::after(STATE_POLL_INTERVAL).await;
     }
 }
 
