@@ -13,7 +13,7 @@
 		}
         let fetch = await loginFetcher(email, password)
         if (!fetch.success) {
-            alert("Server Errror. Reason: " + fetch.message)
+            alert("Server Error. Reason: " + fetch.message)
             return
         }
         goto("/dashboard")
