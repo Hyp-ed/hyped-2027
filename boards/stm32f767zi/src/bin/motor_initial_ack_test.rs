@@ -105,6 +105,9 @@ async fn main(spawner: Spawner) {
     info!("Configuring overvoltage limit...");
     configure(&mut tx, &frames, Messages::OvervoltageLimit).await;
 
+    info!("Configuring TPDO 0...");
+    configure_tpdo0(&mut tx, &frames).await;
+
     info!("CONFIG COMPLETE");
 
     info!("Checking for heartbeat producer object (0x1017:0)...");
@@ -235,6 +238,14 @@ async fn can_receiver(mut rx: CanRx<'static>) {
                     embassy_stm32::can::Id::Standard(id) if id.as_raw() == HEARTBEAT_ID => {
                         log_heartbeat(frame.data());
                     }
+                    embassy_stm32::can::Id::Standard(id) if id.as_raw() == TPDO0_COB_ID => {
+                        log_tpdo0(frame.data());
+                    }
+                    embassy_stm32::can::Id::Standard(id)
+                        if TPDO_DEFAULT_COB_IDS[1..].contains(&id.as_raw()) =>
+                    {
+                        log_frame("Unmapped TPDO", &frame);
+                    }
                     _ => FRAMES.send(frame).await,
                 }
             }
@@ -288,6 +299,161 @@ fn log_heartbeat(data: &[u8]) {
     info!(
         "Heartbeat: state={=u8:#04x} ({=str}) r={=u8}",
         state, name, reserved
+    );
+}
+
+const TPDO_COMM_INDEX: u16 = 0x1800;
+const TPDO_MAPPING_INDEX: u16 = 0x1A00;
+/// Default COB-IDs of TPDO 0-3
+const TPDO_DEFAULT_COB_IDS: [u16; 4] = [
+    0x180 + NODE_ID as u16,
+    0x280 + NODE_ID as u16,
+    0x380 + NODE_ID as u16,
+    0x480 + NODE_ID as u16,
+];
+const TPDO0_COB_ID: u16 = TPDO_DEFAULT_COB_IDS[0];
+/// CiA 301 COB-ID bit 31: set means the PDO is *not* valid (disabled)
+const PDO_COB_ID_INVALID: u32 = 1 << 31;
+/// CiA 301 COB-ID bit 30: set means RTR is *not* allowed
+const PDO_COB_ID_NO_RTR: u32 = 1 << 30;
+/// Event-driven (manufacturer specific), sent at least every event timer period
+const TPDO0_TRANSMISSION_TYPE: u32 = 0xFF;
+const TPDO0_EVENT_TIMER_MS: u32 = 100;
+
+/// (index, sub-index, size in bits) of each object mapped into TPDO 0, in payload order
+const TPDO0_MAPPING: [(u16, u8, u8); 4] = [
+    (0x2026, 0x01, 8),  // controller temperature
+    (0x2026, 0x02, 8),  // capacitor temperature
+    (0x6079, 0x00, 16), // DC link voltage
+    (0x606C, 0x00, 32), // velocity
+];
+
+/// Build an expedited SDO download of `size` bytes
+fn sdo_write(index: u16, sub_index: u8, size: u8, data: u32) -> CanOpenMessage {
+    let command = match size {
+        1 => 0x2F,
+        2 => 0x2B,
+        3 => 0x27,
+        4 => 0x23,
+        _ => defmt::panic!("Invalid expedited SDO size {=u8}", size),
+    };
+    CanOpenMessage {
+        id: SDO_TX_ID,
+        command,
+        index,
+        sub_index,
+        data,
+    }
+}
+
+/// Check that the TPDO 0 communication and mapping objects exist, then map `TPDO0_MAPPING`
+/// into it and enable it. Logs and skips the setup if either object is missing.
+async fn configure_tpdo0(tx: &mut CanTx<'static>, frames: &FrameReceiver) {
+    let comm = sdo_upload(tx, frames, TPDO_COMM_INDEX, 0x00).await;
+    if comm.command == SDO_ABORT {
+        error!(
+            "0x1800 does not exist: abort code {=u32:#010x}. Skipping TPDO setup.",
+            comm.data
+        );
+        return;
+    }
+    let comm_entries = comm.data as u8;
+    info!("0x1800 exists with {=u8} entries", comm_entries);
+
+    let mapping = sdo_upload(tx, frames, TPDO_MAPPING_INDEX, 0x00).await;
+    if mapping.command == SDO_ABORT {
+        error!(
+            "0x1A00 does not exist: abort code {=u32:#010x}. Skipping TPDO setup.",
+            mapping.data
+        );
+        return;
+    }
+    info!(
+        "0x1A00 exists with {=u8} mapped objects",
+        mapping.data as u8
+    );
+
+    let cob = sdo_upload(tx, frames, TPDO_COMM_INDEX, 0x01).await;
+    assert_not_abort(&cob);
+    info!("TPDO 0 current COB-ID: {=u32:#010x}", cob.data);
+
+    // CiA 301: the PDO must be disabled before its parameters or mapping can change
+    configure(
+        tx,
+        frames,
+        sdo_write(TPDO_COMM_INDEX, 0x01, 4, cob.data | PDO_COB_ID_INVALID),
+    )
+    .await;
+
+    configure(
+        tx,
+        frames,
+        sdo_write(TPDO_COMM_INDEX, 0x02, 1, TPDO0_TRANSMISSION_TYPE),
+    )
+    .await;
+    if comm_entries >= 0x05 {
+        configure(
+            tx,
+            frames,
+            sdo_write(TPDO_COMM_INDEX, 0x05, 2, TPDO0_EVENT_TIMER_MS),
+        )
+        .await;
+    } else {
+        warn!("0x1800 has no event timer (sub-index 5); TPDO 0 will only send on events");
+    }
+
+    // Mapping count must be 0 while entries are written
+    configure(tx, frames, sdo_write(TPDO_MAPPING_INDEX, 0x00, 1, 0)).await;
+    let mut total_bits: u32 = 0;
+    for (i, &(index, sub_index, bits)) in TPDO0_MAPPING.iter().enumerate() {
+        let entry = (u32::from(index) << 16) | (u32::from(sub_index) << 8) | u32::from(bits);
+        configure(
+            tx,
+            frames,
+            sdo_write(TPDO_MAPPING_INDEX, i as u8 + 1, 4, entry),
+        )
+        .await;
+        total_bits += u32::from(bits);
+    }
+    defmt::assert!(total_bits <= 64, "TPDO 0 mapping exceeds 8 bytes");
+    configure(
+        tx,
+        frames,
+        sdo_write(TPDO_MAPPING_INDEX, 0x00, 1, TPDO0_MAPPING.len() as u32),
+    )
+    .await;
+
+    configure(
+        tx,
+        frames,
+        sdo_write(
+            TPDO_COMM_INDEX,
+            0x01,
+            4,
+            PDO_COB_ID_NO_RTR | u32::from(TPDO0_COB_ID),
+        ),
+    )
+    .await;
+    info!("TPDO 0 enabled on COB-ID {=u16:#x}", TPDO0_COB_ID);
+}
+
+/// Decode a TPDO 0 frame according to `TPDO0_MAPPING`
+fn log_tpdo0(data: &[u8]) {
+    if data.len() != 8 {
+        warn!(
+            "TPDO 0 with unexpected DLC {=usize}: {=[u8]:#02x}",
+            data.len(),
+            data
+        );
+        return;
+    }
+    let controller_temp = data[0];
+    let capacitor_temp = data[1];
+    let dc_link_voltage = u16::from_le_bytes([data[2], data[3]]);
+    let velocity = i32::from_le_bytes([data[4], data[5], data[6], data[7]]);
+    info!(
+        "TPDO 0: controller_temp={=u8} capacitor_temp={=u8} dc_link_voltage={=u16} velocity={=i32}",
+        controller_temp, capacitor_temp, dc_link_voltage, velocity
     );
 }
 
