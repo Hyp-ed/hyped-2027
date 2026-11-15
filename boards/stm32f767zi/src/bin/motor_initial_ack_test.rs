@@ -7,10 +7,14 @@ use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
     can::{
-        filter::Mask32, Can, CanRx, CanTx, Fifo, Rx0InterruptHandler, Rx1InterruptHandler,
+        filter::Mask32, Can, CanRx, CanTx, Fifo, Frame, Rx0InterruptHandler, Rx1InterruptHandler,
         SceInterruptHandler, TxInterruptHandler,
     },
     peripherals::CAN1,
+};
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    channel::{Channel, Receiver},
 };
 use embassy_time::{with_timeout, Duration, Timer};
 use hyped_can::HypedCanFrame;
@@ -67,40 +71,70 @@ async fn main(spawner: Spawner) {
 
     info!("Received bootup frame!");
 
+    unwrap!(spawner.spawn(can_receiver(rx)));
+    let frames = FRAMES.receiver();
+
     // TODO: ask what this is before testing
     info!("Resetting test mode...");
-    configure(&mut tx, &mut rx, Messages::TestModeCommand(0)).await;
+    configure(&mut tx, &frames, Messages::TestModeCommand(0)).await;
 
     info!("Configuring Modes of Operation...");
-    configure(&mut tx, &mut rx, Messages::ModesOfOperation).await;
+    configure(&mut tx, &frames, Messages::ModesOfOperation).await;
 
     info!("Configuring Sensor Type...");
-    configure(&mut tx, &mut rx, Messages::SensorType).await;
+    configure(&mut tx, &frames, Messages::SensorType).await;
 
     info!("Configuring Undervoltage Limit...");
-    configure(&mut tx, &mut rx, Messages::UndervoltageLimit).await;
+    configure(&mut tx, &frames, Messages::UndervoltageLimit).await;
 
     info!("Configuring Test Stepper frequency...");
-    configure(&mut tx, &mut rx, Messages::TestStepperFrequency).await;
+    configure(&mut tx, &frames, Messages::TestStepperFrequency).await;
 
     info!("Configuring Test Stepper Enable...");
-    configure(&mut tx, &mut rx, Messages::TestStepperEnable).await;
+    configure(&mut tx, &frames, Messages::TestStepperEnable).await;
 
     info!("Configuring maximum controller current...");
-    configure(&mut tx, &mut rx, Messages::SetMaxCurrent).await;
+    configure(&mut tx, &frames, Messages::SetMaxCurrent).await;
 
     info!("Configuring secondary current protection...");
-    configure(&mut tx, &mut rx, Messages::SecondaryCurrentProtection).await;
+    configure(&mut tx, &frames, Messages::SecondaryCurrentProtection).await;
 
     info!("Configuring motor rated current...");
-    configure(&mut tx, &mut rx, Messages::MotorRatedCurrent).await;
+    configure(&mut tx, &frames, Messages::MotorRatedCurrent).await;
 
     info!("Configuring overvoltage limit...");
-    configure(&mut tx, &mut rx, Messages::OvervoltageLimit).await;
+    configure(&mut tx, &frames, Messages::OvervoltageLimit).await;
 
     info!("CONFIG COMPLETE");
 
-    unwrap!(spawner.spawn(rx_task(rx)));
+    info!("Checking for heartbeat producer object (0x1017:0)...");
+    let heartbeat = sdo_upload(&mut tx, &frames, HEARTBEAT_TIME_INDEX, 0).await;
+    if heartbeat.command == SDO_ABORT {
+        info!(
+            "0x1017:0 does not exist: abort code {=u32:#010x}",
+            heartbeat.data
+        );
+    } else {
+        info!(
+            "0x1017:0 exists: producer heartbeat time = {=u32} ms",
+            heartbeat.data & 0xFFFF
+        );
+        info!("Configuring heartbeat to {=u32} ms...", HEARTBEAT_TIME_MS);
+        configure(
+            &mut tx,
+            &frames,
+            CanOpenMessage {
+                id: SDO_TX_ID,
+                command: 0x2B,
+                index: HEARTBEAT_TIME_INDEX,
+                sub_index: 0x00,
+                data: HEARTBEAT_TIME_MS,
+            },
+        )
+        .await;
+    }
+
+    unwrap!(spawner.spawn(frame_logger(frames)));
     Timer::after(Duration::from_secs(5)).await;
 
     info!("Sending Preoperational message...");
@@ -160,28 +194,76 @@ async fn main(spawner: Spawner) {
     }
 }
 
+type FrameReceiver = Receiver<'static, CriticalSectionRawMutex, Frame, 16>;
+
+/// Non-heartbeat frames received from the motor controller
+static FRAMES: Channel<CriticalSectionRawMutex, Frame, 16> = Channel::new();
+
+/// Reads every frame off the bus, logging heartbeats and forwarding everything else to `FRAMES`
 #[embassy_executor::task]
-async fn rx_task(mut rx: CanRx<'static>) {
+async fn can_receiver(mut rx: CanRx<'static>) {
     loop {
         match rx.read().await {
             Ok(envelope) => {
                 let frame = envelope.frame;
-                let raw_id: u32 = match frame.id() {
-                    embassy_stm32::can::Id::Standard(id) => id.as_raw() as u32,
-                    embassy_stm32::can::Id::Extended(id) => id.as_raw(),
-                };
-                info!(
-                    "Received id={=u32:x} data={=[u8]:#02x}",
-                    raw_id,
-                    frame.data()
-                );
+                match frame.id() {
+                    embassy_stm32::can::Id::Standard(id) if id.as_raw() == HEARTBEAT_ID => {
+                        log_heartbeat(frame.data());
+                    }
+                    _ => FRAMES.send(frame).await,
+                }
             }
-            Err(e) => {
-                warn!("CAN receive error: {:?}", e);
-                continue;
-            }
+            Err(e) => warn!("CAN receive error: {:?}", e),
         }
     }
+}
+
+/// Logs non-heartbeat frames once the config phase no longer consumes them
+#[embassy_executor::task]
+async fn frame_logger(frames: FrameReceiver) {
+    loop {
+        log_frame("Received", &frames.receive().await);
+    }
+}
+
+fn log_frame(prefix: &str, frame: &Frame) {
+    let raw_id: u32 = match frame.id() {
+        embassy_stm32::can::Id::Standard(id) => id.as_raw() as u32,
+        embassy_stm32::can::Id::Extended(id) => id.as_raw(),
+    };
+    info!(
+        "{=str} id={=u32:x} data={=[u8]:#02x}",
+        prefix,
+        raw_id,
+        frame.data()
+    );
+}
+
+/// Log a heartbeat frame: 1 byte, bit 7 reserved, bits 6..0 the NMT state
+fn log_heartbeat(data: &[u8]) {
+    if data.len() != 1 {
+        warn!(
+            "Heartbeat with unexpected DLC {=usize}: {=[u8]:#02x}",
+            data.len(),
+            data
+        );
+    }
+    let Some(&byte) = data.first() else {
+        return;
+    };
+    let reserved = byte >> 7;
+    let state = byte & 0x7F;
+    let name = match state {
+        0x00 => "Boot-up",
+        0x04 => "Stopped",
+        0x05 => "Operational",
+        0x7F => "Pre-operational",
+        _ => "Unknown",
+    };
+    info!(
+        "Heartbeat: state={=u8:#04x} ({=str}) r={=u8}",
+        state, name, reserved
+    );
 }
 
 const SDO_RX_ID: u16 = 0x580 + NODE_ID as u16;
@@ -191,15 +273,21 @@ const SDO_UPLOAD_REQUEST: u8 = 0x40;
 const SDO_DOWNLOAD_RESPONSE: u8 = 0x60;
 const SDO_ABORT: u8 = 0x80;
 const SDO_RESPONSE_TIMEOUT: Duration = Duration::from_secs(1);
+const HEARTBEAT_TIME_INDEX: u16 = 0x1017;
+const HEARTBEAT_TIME_MS: u32 = 100;
 
 /// Write an SDO, assert the controller acknowledged it, then read the object back and verify it
 /// holds the value that was written.
-async fn configure(tx: &mut CanTx<'static>, rx: &mut CanRx<'static>, msg: Messages) {
+async fn configure(
+    tx: &mut CanTx<'static>,
+    frames: &FrameReceiver,
+    msg: impl Into<CanOpenMessage>,
+) {
     let write: CanOpenMessage = msg.into();
 
     send_sdo(tx, write.clone()).await;
-    let ack = read_sdo_response(rx).await;
-    check_sdo_object(&write, &ack);
+    let ack = read_sdo_response(frames, write.index, write.sub_index).await;
+    assert_not_abort(&ack);
     defmt::assert_eq!(
         ack.command,
         SDO_DOWNLOAD_RESPONSE,
@@ -208,19 +296,8 @@ async fn configure(tx: &mut CanTx<'static>, rx: &mut CanRx<'static>, msg: Messag
         write.sub_index
     );
 
-    send_sdo(
-        tx,
-        CanOpenMessage {
-            id: SDO_TX_ID,
-            command: SDO_UPLOAD_REQUEST,
-            index: write.index,
-            sub_index: write.sub_index,
-            data: 0,
-        },
-    )
-    .await;
-    let read = read_sdo_response(rx).await;
-    check_sdo_object(&write, &read);
+    let read = sdo_upload(tx, frames, write.index, write.sub_index).await;
+    assert_not_abort(&read);
 
     // An expedited upload response mirrors the download command with bit 6 set instead of bit 5
     // (0x2F -> 0x4F, 0x2B -> 0x4B, 0x23 -> 0x43), so the sizes match iff this holds
@@ -251,8 +328,28 @@ async fn configure(tx: &mut CanTx<'static>, rx: &mut CanRx<'static>, msg: Messag
     );
 }
 
-/// Panic if the response is an abort or refers to a different object than the request
-fn check_sdo_object(request: &CanOpenMessage, response: &CanOpenMessage) {
+/// Request an object from the controller. The response may be an abort, which the caller handles.
+async fn sdo_upload(
+    tx: &mut CanTx<'static>,
+    frames: &FrameReceiver,
+    index: u16,
+    sub_index: u8,
+) -> CanOpenMessage {
+    send_sdo(
+        tx,
+        CanOpenMessage {
+            id: SDO_TX_ID,
+            command: SDO_UPLOAD_REQUEST,
+            index,
+            sub_index,
+            data: 0,
+        },
+    )
+    .await;
+    read_sdo_response(frames, index, sub_index).await
+}
+
+fn assert_not_abort(response: &CanOpenMessage) {
     if response.command == SDO_ABORT {
         defmt::panic!(
             "SDO abort for {=u16:#06x}:{=u8}: code {=u32:#010x}",
@@ -261,74 +358,37 @@ fn check_sdo_object(request: &CanOpenMessage, response: &CanOpenMessage) {
             response.data
         );
     }
-    defmt::assert_eq!(response.index, request.index, "SDO response index mismatch");
-    defmt::assert_eq!(
-        response.sub_index,
-        request.sub_index,
-        "SDO response sub-index mismatch"
-    );
 }
 
-/// Wait for the next SDO response from the motor controller, skipping any other frames
-async fn read_sdo_response(rx: &mut CanRx<'static>) -> CanOpenMessage {
+/// Wait for the next SDO response, skipping other frames, and assert it refers to the given object
+async fn read_sdo_response(frames: &FrameReceiver, index: u16, sub_index: u8) -> CanOpenMessage {
     loop {
-        let envelope = match with_timeout(SDO_RESPONSE_TIMEOUT, rx.read()).await {
-            Ok(Ok(envelope)) => envelope,
-            Ok(Err(e)) => {
-                warn!("CAN receive error: {:?}", e);
-                continue;
-            }
-            Err(_) => defmt::panic!("Timed out waiting for SDO response"),
+        let Ok(frame) = with_timeout(SDO_RESPONSE_TIMEOUT, frames.receive()).await else {
+            defmt::panic!("Timed out waiting for SDO response");
         };
 
-        let frame = envelope.frame;
         match frame.id() {
             embassy_stm32::can::Id::Standard(id) if id.as_raw() == SDO_RX_ID => {
                 let data = frame.data();
                 defmt::assert_eq!(data.len(), 8, "SDO response must be 8 bytes");
-                return CanOpenMessage {
+                let response = CanOpenMessage {
                     id: SDO_RX_ID as u32,
                     command: data[0],
                     index: u16::from_le_bytes([data[1], data[2]]),
                     sub_index: data[3],
                     data: u32::from_le_bytes([data[4], data[5], data[6], data[7]]),
                 };
-            }
-            embassy_stm32::can::Id::Standard(id) if id.as_raw() == HEARTBEAT_ID => {
-                log_heartbeat(frame.data());
-            }
-            embassy_stm32::can::Id::Standard(id) => {
-                info!(
-                    "Skipping id={=u16:x} data={=[u8]:#02x}",
-                    id.as_raw(),
-                    frame.data()
+                defmt::assert_eq!(response.index, index, "SDO response index mismatch");
+                defmt::assert_eq!(
+                    response.sub_index,
+                    sub_index,
+                    "SDO response sub-index mismatch"
                 );
+                return response;
             }
-            embassy_stm32::can::Id::Extended(id) => {
-                info!(
-                    "Skipping id={=u32:x} data={=[u8]:#02x}",
-                    id.as_raw(),
-                    frame.data()
-                );
-            }
+            _ => log_frame("Skipping", &frame),
         }
     }
-}
-
-/// Log a heartbeat frame along with the NMT state it reports
-fn log_heartbeat(data: &[u8]) {
-    let Some(&state) = data.first() else {
-        warn!("Empty heartbeat frame");
-        return;
-    };
-    let name = match state {
-        0x00 => "Boot-up",
-        0x04 => "Stopped",
-        0x05 => "Operational",
-        0x7F => "Pre-operational",
-        _ => "Unknown",
-    };
-    info!("Heartbeat: state={=u8:#04x} ({=str})", state, name);
 }
 
 async fn wait_after_send() {
