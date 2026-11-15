@@ -82,3 +82,11 @@ jobs:
           else
             echo "All good"
           fi
+  go-linter:
+    name: Golang Linter for the backend code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Golangci-lint
+        uses: golangci/golangci-lint-action@v9.3.0
+        with:
+          working-directory: telemetry_new/backend 
