@@ -15,8 +15,9 @@ use embassy_stm32::{
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{Channel, Receiver},
+    mutex::Mutex,
 };
-use embassy_time::{with_timeout, Duration, Instant, Timer};
+use embassy_time::{with_timeout, Duration, Instant, Ticker, Timer};
 use hyped_can::HypedCanFrame;
 use hyped_motors::{can_open_message::CanOpenMessage, can_open_processor::Messages};
 use panic_probe as _;
@@ -46,7 +47,9 @@ async fn main(spawner: Spawner) {
 
     info!("CAN1 enabled");
 
-    let (mut tx, mut rx) = can.split();
+    let (tx, mut rx) = can.split();
+    static TX: StaticCell<Mutex<CriticalSectionRawMutex, CanTx<'static>>> = StaticCell::new();
+    let tx: SharedTx = TX.init(Mutex::new(tx));
 
     match rx.read().await {
         Ok(envelope) => {
@@ -76,42 +79,56 @@ async fn main(spawner: Spawner) {
 
     // TODO: ask what this is before testing
     info!("Resetting test mode...");
-    configure(&mut tx, &frames, Messages::TestModeCommand(0)).await;
+    configure(tx, &frames, Messages::TestModeCommand(0)).await;
 
     info!("Configuring Modes of Operation...");
-    configure(&mut tx, &frames, Messages::ModesOfOperation).await;
+    configure(tx, &frames, Messages::ModesOfOperation).await;
 
     info!("Configuring Sensor Type...");
-    configure(&mut tx, &frames, Messages::SensorType).await;
+    configure(tx, &frames, Messages::SensorType).await;
 
     info!("Configuring Undervoltage Limit...");
-    configure(&mut tx, &frames, Messages::UndervoltageLimit).await;
+    configure(tx, &frames, Messages::UndervoltageLimit).await;
 
     info!("Configuring Test Stepper frequency...");
-    configure(&mut tx, &frames, Messages::TestStepperFrequency).await;
+    configure(tx, &frames, Messages::TestStepperFrequency).await;
 
     info!("Configuring Test Stepper Enable...");
-    configure(&mut tx, &frames, Messages::TestStepperEnable).await;
+    configure(tx, &frames, Messages::TestStepperEnable).await;
 
     info!("Configuring maximum controller current...");
-    configure(&mut tx, &frames, Messages::SetMaxCurrent).await;
+    configure(tx, &frames, Messages::SetMaxCurrent).await;
 
     info!("Configuring secondary current protection...");
-    configure(&mut tx, &frames, Messages::SecondaryCurrentProtection).await;
+    configure(tx, &frames, Messages::SecondaryCurrentProtection).await;
 
     info!("Configuring motor rated current...");
-    configure(&mut tx, &frames, Messages::MotorRatedCurrent).await;
+    configure(tx, &frames, Messages::MotorRatedCurrent).await;
 
     info!("Configuring overvoltage limit...");
-    configure(&mut tx, &frames, Messages::OvervoltageLimit).await;
+    configure(tx, &frames, Messages::OvervoltageLimit).await;
 
     info!("Configuring TPDO 0...");
-    configure_tpdo0(&mut tx, &frames).await;
+    configure_tpdo0(tx, &frames).await;
+
+    let sync_cob = sdo_upload(tx, &frames, SYNC_COB_ID_INDEX, 0x00).await;
+    if sync_cob.command == SDO_ABORT {
+        warn!(
+            "0x1005 (SYNC COB-ID) not readable: abort code {=u32:#010x}",
+            sync_cob.data
+        );
+    } else {
+        info!(
+            "Drive consumes SYNC on COB-ID {=u32:#x}",
+            sync_cob.data & 0x7FF
+        );
+    }
+    unwrap!(spawner.spawn(sync_producer(tx)));
 
     info!("CONFIG COMPLETE");
 
     info!("Checking for heartbeat producer object (0x1017:0)...");
-    let heartbeat = sdo_upload(&mut tx, &frames, HEARTBEAT_TIME_INDEX, 0).await;
+    let heartbeat = sdo_upload(tx, &frames, HEARTBEAT_TIME_INDEX, 0).await;
     if heartbeat.command == SDO_ABORT {
         info!(
             "0x1017:0 does not exist: abort code {=u32:#010x}",
@@ -124,7 +141,7 @@ async fn main(spawner: Spawner) {
         );
         info!("Configuring heartbeat to {=u32} ms...", HEARTBEAT_TIME_MS);
         configure(
-            &mut tx,
+            tx,
             &frames,
             CanOpenMessage {
                 id: SDO_TX_ID,
@@ -141,12 +158,12 @@ async fn main(spawner: Spawner) {
 
     // The controller is already pre-operational after sending its bootup frame
     // info!("Sending Preoperational message...");
-    // send_motor_message(&mut tx, Messages::EnterPreoperationalState).await;
+    // send_motor_message(tx, Messages::EnterPreoperationalState).await;
     // Timer::after(Duration::from_secs(30)).await;
     // wait_after_send().await;
 
     info!("Checking for statusword object (0x6041:0)...");
-    let status = sdo_upload(&mut tx, &frames, STATUSWORD_INDEX, 0).await;
+    let status = sdo_upload(tx, &frames, STATUSWORD_INDEX, 0).await;
     if status.command == SDO_ABORT {
         error!(
             "0x6041:0 does not exist: abort code {=u32:#010x}. Not enabling the drive.",
@@ -164,26 +181,26 @@ async fn main(spawner: Spawner) {
     );
 
     info!("Sending Operational message...");
-    send_motor_message(&mut tx, Messages::EnterOperationalState).await;
+    send_motor_message(tx, Messages::EnterOperationalState).await;
     wait_after_send().await;
 
     if DriveState::decode(statusword) == DriveState::Fault {
         info!("Drive is faulted, sending Fault Reset...");
-        set_controlword(&mut tx, &frames, CONTROLWORD_FAULT_RESET).await;
-        wait_for_state(&mut tx, &frames, DriveState::SwitchOnDisabled).await;
+        set_controlword(tx, &frames, CONTROLWORD_FAULT_RESET).await;
+        wait_for_state(tx, &frames, DriveState::SwitchOnDisabled).await;
     }
 
     info!("Sending Shutdown message...");
-    set_controlword(&mut tx, &frames, Messages::Shutdown).await;
-    wait_for_state(&mut tx, &frames, DriveState::ReadyToSwitchOn).await;
+    set_controlword(tx, &frames, Messages::Shutdown).await;
+    wait_for_state(tx, &frames, DriveState::ReadyToSwitchOn).await;
 
     info!("Sending Switch On message...");
-    set_controlword(&mut tx, &frames, Messages::SwitchOn).await;
-    wait_for_state(&mut tx, &frames, DriveState::SwitchedOn).await;
+    set_controlword(tx, &frames, Messages::SwitchOn).await;
+    wait_for_state(tx, &frames, DriveState::SwitchedOn).await;
 
     info!("Sending Start Drive message...");
-    set_controlword(&mut tx, &frames, Messages::StartDrive).await;
-    wait_for_state(&mut tx, &frames, DriveState::OperationEnabled).await;
+    set_controlword(tx, &frames, Messages::StartDrive).await;
+    wait_for_state(tx, &frames, DriveState::OperationEnabled).await;
 
     unwrap!(spawner.spawn(frame_logger(frames)));
 
@@ -191,31 +208,31 @@ async fn main(spawner: Spawner) {
     info!("Incrementing Test Mode Command to 1000...");
 
     info!("Setting Test Mode Command to 200");
-    send_motor_message(&mut tx, Messages::TestModeCommand(200)).await;
+    send_motor_message(tx, Messages::TestModeCommand(200)).await;
     Timer::after(Duration::from_secs(3)).await;
 
     info!("Setting Test Mode Command to 400");
-    send_motor_message(&mut tx, Messages::TestModeCommand(400)).await;
+    send_motor_message(tx, Messages::TestModeCommand(400)).await;
     Timer::after(Duration::from_secs(3)).await;
 
     info!("Setting Test Mode Command to 600");
-    send_motor_message(&mut tx, Messages::TestModeCommand(600)).await;
+    send_motor_message(tx, Messages::TestModeCommand(600)).await;
     Timer::after(Duration::from_secs(3)).await;
 
     info!("Setting Test Mode Command to 800");
-    send_motor_message(&mut tx, Messages::TestModeCommand(800)).await;
+    send_motor_message(tx, Messages::TestModeCommand(800)).await;
     Timer::after(Duration::from_secs(3)).await;
 
     info!("Setting Test Mode Command to 1000");
-    send_motor_message(&mut tx, Messages::TestModeCommand(1000)).await;
+    send_motor_message(tx, Messages::TestModeCommand(1000)).await;
     Timer::after(Duration::from_secs(3)).await;
 
     info!("Ramping down Test Mode Command to 0...");
-    send_motor_message(&mut tx, Messages::TestModeCommand(500)).await;
+    send_motor_message(tx, Messages::TestModeCommand(500)).await;
     Timer::after(Duration::from_secs(3)).await;
 
     info!("Stopping motor...");
-    send_motor_message(&mut tx, Messages::EnterStopState).await;
+    send_motor_message(tx, Messages::EnterStopState).await;
 
     loop {
         Timer::after(Duration::from_secs(1)).await;
@@ -316,9 +333,8 @@ const TPDO0_COB_ID: u16 = TPDO_DEFAULT_COB_IDS[0];
 const PDO_COB_ID_INVALID: u32 = 1 << 31;
 /// CiA 301 COB-ID bit 30: set means RTR is *not* allowed
 const PDO_COB_ID_NO_RTR: u32 = 1 << 30;
-/// Event-driven (manufacturer specific), sent at least every event timer period
-const TPDO0_TRANSMISSION_TYPE: u32 = 0xFF;
-const TPDO0_EVENT_TIMER_MS: u32 = 100;
+/// Synchronous cyclic: sent once after every SYNC
+const TPDO0_TRANSMISSION_TYPE: u32 = 0x01;
 
 /// (index, sub-index, size in bits) of each object mapped into TPDO 0, in payload order
 const TPDO0_MAPPING: [(u16, u8, u8); 4] = [
@@ -348,7 +364,7 @@ fn sdo_write(index: u16, sub_index: u8, size: u8, data: u32) -> CanOpenMessage {
 
 /// Check that the TPDO 0 communication and mapping objects exist, then map `TPDO0_MAPPING`
 /// into it and enable it. Logs and skips the setup if either object is missing.
-async fn configure_tpdo0(tx: &mut CanTx<'static>, frames: &FrameReceiver) {
+async fn configure_tpdo0(tx: SharedTx, frames: &FrameReceiver) {
     let comm = sdo_upload(tx, frames, TPDO_COMM_INDEX, 0x00).await;
     if comm.command == SDO_ABORT {
         error!(
@@ -391,16 +407,6 @@ async fn configure_tpdo0(tx: &mut CanTx<'static>, frames: &FrameReceiver) {
         sdo_write(TPDO_COMM_INDEX, 0x02, 1, TPDO0_TRANSMISSION_TYPE),
     )
     .await;
-    if comm_entries >= 0x05 {
-        configure(
-            tx,
-            frames,
-            sdo_write(TPDO_COMM_INDEX, 0x05, 2, TPDO0_EVENT_TIMER_MS),
-        )
-        .await;
-    } else {
-        warn!("0x1800 has no event timer (sub-index 5); TPDO 0 will only send on events");
-    }
 
     // Mapping count must be 0 while entries are written
     configure(tx, frames, sdo_write(TPDO_MAPPING_INDEX, 0x00, 1, 0)).await;
@@ -457,6 +463,25 @@ fn log_tpdo0(data: &[u8]) {
     );
 }
 
+type SharedTx = &'static Mutex<CriticalSectionRawMutex, CanTx<'static>>;
+
+const SYNC_COB_ID: u16 = 0x080;
+const SYNC_COB_ID_INDEX: u16 = 0x1005;
+const SYNC_PERIOD: Duration = Duration::from_millis(100);
+
+/// Sends a SYNC (COB-ID 0x80, no data) every `SYNC_PERIOD`, which triggers the sync cyclic TPDOs
+#[embassy_executor::task]
+async fn sync_producer(tx: SharedTx) {
+    let id =
+        embassy_stm32::can::Id::Standard(unwrap!(embassy_stm32::can::StandardId::new(SYNC_COB_ID)));
+    let frame = unwrap!(Frame::new_data(id, &[]));
+    let mut ticker = Ticker::every(SYNC_PERIOD);
+    loop {
+        tx.lock().await.write(&frame).await;
+        ticker.next().await;
+    }
+}
+
 const SDO_RX_ID: u16 = 0x580 + NODE_ID as u16;
 const HEARTBEAT_ID: u16 = 0x700 + NODE_ID as u16;
 const SDO_TX_ID: u32 = 0x600 + NODE_ID as u32;
@@ -469,11 +494,7 @@ const HEARTBEAT_TIME_MS: u32 = 100;
 
 /// Write an SDO, assert the controller acknowledged it, then read the object back and verify it
 /// holds the value that was written.
-async fn configure(
-    tx: &mut CanTx<'static>,
-    frames: &FrameReceiver,
-    msg: impl Into<CanOpenMessage>,
-) {
+async fn configure(tx: SharedTx, frames: &FrameReceiver, msg: impl Into<CanOpenMessage>) {
     let write: CanOpenMessage = msg.into();
 
     send_sdo(tx, write.clone()).await;
@@ -521,7 +542,7 @@ async fn configure(
 
 /// Request an object from the controller. The response may be an abort, which the caller handles.
 async fn sdo_upload(
-    tx: &mut CanTx<'static>,
+    tx: SharedTx,
     frames: &FrameReceiver,
     index: u16,
     sub_index: u8,
@@ -627,11 +648,7 @@ impl DriveState {
 }
 
 /// Write the controlword and assert the controller acknowledged it
-async fn set_controlword(
-    tx: &mut CanTx<'static>,
-    frames: &FrameReceiver,
-    msg: impl Into<CanOpenMessage>,
-) {
+async fn set_controlword(tx: SharedTx, frames: &FrameReceiver, msg: impl Into<CanOpenMessage>) {
     let write: CanOpenMessage = msg.into();
     send_sdo(tx, write.clone()).await;
     let ack = read_sdo_response(frames, write.index, write.sub_index).await;
@@ -643,14 +660,14 @@ async fn set_controlword(
     );
 }
 
-async fn read_statusword(tx: &mut CanTx<'static>, frames: &FrameReceiver) -> u16 {
+async fn read_statusword(tx: SharedTx, frames: &FrameReceiver) -> u16 {
     let read = sdo_upload(tx, frames, STATUSWORD_INDEX, 0).await;
     assert_not_abort(&read);
     read.data as u16
 }
 
 /// Poll the statusword until the drive reports `expected`, panicking on fault or timeout
-async fn wait_for_state(tx: &mut CanTx<'static>, frames: &FrameReceiver, expected: DriveState) {
+async fn wait_for_state(tx: SharedTx, frames: &FrameReceiver, expected: DriveState) {
     let deadline = Instant::now() + STATE_TIMEOUT;
     loop {
         let statusword = read_statusword(tx, frames).await;
@@ -685,15 +702,15 @@ async fn wait_after_send() {
     Timer::after(Duration::from_secs(1)).await;
 }
 
-async fn send_nmt(tx: &mut CanTx<'static>, command: u8, node_id: u8) {
+async fn send_nmt(tx: SharedTx, command: u8, node_id: u8) {
     let id = embassy_stm32::can::Id::Standard(unwrap!(embassy_stm32::can::StandardId::new(0x000)));
 
     let data = [command, node_id];
     let frame = embassy_stm32::can::Frame::new_data(id, &data).unwrap();
-    tx.write(&frame).await;
+    tx.lock().await.write(&frame).await;
 }
 
-async fn send_sdo(tx: &mut CanTx<'static>, msg: CanOpenMessage) {
+async fn send_sdo(tx: SharedTx, msg: CanOpenMessage) {
     let hyped_frame: HypedCanFrame = msg.into();
 
     let id = if hyped_frame.can_id <= 0x7FF {
@@ -707,10 +724,10 @@ async fn send_sdo(tx: &mut CanTx<'static>, msg: CanOpenMessage) {
     };
 
     let frame = embassy_stm32::can::Frame::new_data(id, &hyped_frame.data).unwrap();
-    tx.write(&frame).await;
+    tx.lock().await.write(&frame).await;
 }
 
-async fn send_motor_message(tx: &mut CanTx<'static>, msg: Messages) {
+async fn send_motor_message(tx: SharedTx, msg: Messages) {
     match msg {
         Messages::EnterStopState => send_nmt(tx, 0x02, NODE_ID).await,
         Messages::EnterPreoperationalState => send_nmt(tx, 0x80, NODE_ID).await,
