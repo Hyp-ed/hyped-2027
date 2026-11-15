@@ -67,6 +67,7 @@ async fn main(spawner: Spawner) {
 
     info!("Received bootup frame!");
 
+    // TODO: ask what this is before testing
     info!("Resetting test mode...");
     configure(&mut tx, &mut rx, Messages::TestModeCommand(0)).await;
 
@@ -184,6 +185,7 @@ async fn rx_task(mut rx: CanRx<'static>) {
 }
 
 const SDO_RX_ID: u16 = 0x580 + NODE_ID as u16;
+const HEARTBEAT_ID: u16 = 0x700 + NODE_ID as u16;
 const SDO_TX_ID: u32 = 0x600 + NODE_ID as u32;
 const SDO_UPLOAD_REQUEST: u8 = 0x40;
 const SDO_DOWNLOAD_RESPONSE: u8 = 0x60;
@@ -292,6 +294,9 @@ async fn read_sdo_response(rx: &mut CanRx<'static>) -> CanOpenMessage {
                     data: u32::from_le_bytes([data[4], data[5], data[6], data[7]]),
                 };
             }
+            embassy_stm32::can::Id::Standard(id) if id.as_raw() == HEARTBEAT_ID => {
+                log_heartbeat(frame.data());
+            }
             embassy_stm32::can::Id::Standard(id) => {
                 info!(
                     "Skipping id={=u16:x} data={=[u8]:#02x}",
@@ -308,6 +313,22 @@ async fn read_sdo_response(rx: &mut CanRx<'static>) -> CanOpenMessage {
             }
         }
     }
+}
+
+/// Log a heartbeat frame along with the NMT state it reports
+fn log_heartbeat(data: &[u8]) {
+    let Some(&state) = data.first() else {
+        warn!("Empty heartbeat frame");
+        return;
+    };
+    let name = match state {
+        0x00 => "Boot-up",
+        0x04 => "Stopped",
+        0x05 => "Operational",
+        0x7F => "Pre-operational",
+        _ => "Unknown",
+    };
+    info!("Heartbeat: state={=u8:#04x} ({=str})", state, name);
 }
 
 async fn wait_after_send() {
