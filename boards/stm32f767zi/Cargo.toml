@@ -79,3 +79,7 @@ path = "src/bin/boards/board_simulator.rs"
 [[bin]]
 name = "i2cdetect"
 path = "src/bin/tools/i2cdetect.rs"
+
+[[bin]]
+name = "motor_eds_upload"
+path = "src/bin/tools/motor_eds_upload.rs"
