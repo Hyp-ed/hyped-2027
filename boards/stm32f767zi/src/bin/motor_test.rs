@@ -33,7 +33,8 @@ async fn main(spawner: Spawner) {
 
     info!("Setting up CAN1 (main bus)...");
     static CAN: StaticCell<Can<'static>> = StaticCell::new();
-    let can = CAN.init(Can::new(p.CAN1, p.PD0, p.PD1, Irqs));
+    // let can = CAN.init(Can::new(p.CAN1, p.PD0, p.PD1, Irqs));
+    let can = CAN.init(Can::new(p.CAN1, p.PB8, p.PB9, Irqs));
 
     can.modify_filters()
         .enable_bank(0, Fifo::Fifo0, Mask32::accept_all());
