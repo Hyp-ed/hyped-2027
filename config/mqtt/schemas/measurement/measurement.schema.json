@@ -3,13 +3,12 @@
   "$id": "file:///schemas/measurement/measurement.schema.json",
   "title": "Measurement",
   "description": "A sensor reading from the pod. The measurement ID is in the topic (hyped/{podId}/measurement/{measurementId}), and it decides which payload shape applies.",
-
   "type": "array",
   "prefixItems": [
     {
       "title": "Time of data",
       "description": "the time at which the data was acquired",
-      "$ref": "../common.schema.json#/$defs/uint"
+      "$ref": "#/$defs/uint"
     },
     {
       "anyOf": [
@@ -59,7 +58,7 @@
         {
           "title": "measurement",
           "description": "measurement of a current",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "is_SDC_open",
@@ -70,29 +69,28 @@
       "items": false,
       "minItems": 5
     },
-
     "imdStatus": {
       "type": "array",
       "prefixItems": [
         {
           "title": "corrected",
-          "$ref": "../common.schema.json#/$defs/uint"
+          "$ref": "#/$defs/uint"
         },
         {
           "title": "status",
-          "$ref": "../common.schema.json#/$defs/uint"
+          "$ref": "#/$defs/uint"
         },
         {
           "title": "measurement_counter",
-          "$ref": "../common.schema.json#/$defs/uint"
+          "$ref": "#/$defs/uint"
         },
         {
           "title": "warnings_and_alarms",
-          "$ref": "../common.schema.json#/$defs/uint"
+          "$ref": "#/$defs/uint"
         },
         {
           "title": "device_activity",
-          "$ref": "../common.schema.json#/$defs/uint"
+          "$ref": "#/$defs/uint"
         }
       ],
       "items": false,
@@ -103,19 +101,19 @@
       "prefixItems": [
         {
           "title": "voltage",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "current",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "max_cell_mv",
-          "$ref": "../common.schema.json#/$defs/uint"
+          "$ref": "#/$defs/uint"
         },
         {
           "title": "min_cell_mv",
-          "$ref": "../common.schema.json#/$defs/uint"
+          "$ref": "#/$defs/uint"
         },
         {
           "title": "temperatures_c",
@@ -141,7 +139,7 @@
           "title": "cell_voltages_mv",
           "type": "array",
           "items": {
-            "$ref": "../common.schema.json#/$defs/uint"
+            "$ref": "#/$defs/uint"
           },
           "minItems": 16,
           "maxItems": 16
@@ -155,67 +153,67 @@
       "prefixItems": [
         {
           "title": "sns1",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns2",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns3",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns4",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns5",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns6",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns7",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns8",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns9",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns10",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns11",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns12",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns13",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns14",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns15",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns16",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         }
       ],
       "items": false,
@@ -226,18 +224,75 @@
       "prefixItems": [
         {
           "title": "sns1",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         },
         {
           "title": "sns2",
-          "$ref": "../common.schema.json#/$defs/float32"
+          "$ref": "#/$defs/float32"
         }
       ],
       "items": false,
       "minItems": 3
     },
     "motorControllerCmd": {
-      "$ref": "../common.schema.json#/$defs/uint"
+      "$ref": "#/$defs/uint"
+    },
+    "uint": {
+      "$anchor": "uint",
+      "description": "Unsigned integer (CBOR major type 0).",
+      "type": "integer",
+      "minimum": 0
+    },
+    "uint16": {
+      "$anchor": "uint16",
+      "description": "Unsigned 16-bit integer: 0 to 65535.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535
+    },
+    "uint32": {
+      "$anchor": "uint32",
+      "description": "Unsigned 32-bit integer: 0 to 4294967295.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4294967295
+    },
+    "nint": {
+      "$anchor": "nint",
+      "description": "Negative integer (CBOR major type 1): -1 or less.",
+      "type": "integer",
+      "maximum": -1
+    },
+    "nint16": {
+      "$anchor": "nint16",
+      "description": "Negative integer whose CBOR argument fits in 16 bits: -65536 to -1.",
+      "type": "integer",
+      "minimum": -65536,
+      "maximum": -1
+    },
+    "nint32": {
+      "$anchor": "nint32",
+      "description": "Negative integer whose CBOR argument fits in 32 bits: -4294967296 to -1.",
+      "type": "integer",
+      "minimum": -4294967296,
+      "maximum": -1
+    },
+    "float32": {
+      "$anchor": "float32",
+      "description": "Number within IEEE 754 single-precision range. Precision is not enforced.",
+      "type": "number",
+      "minimum": -3.4028234663852886e+38,
+      "maximum": 3.4028234663852886e+38
+    },
+    "bytes": {
+      "$anchor": "bytes",
+      "description": "Byte array as a list of integers 0 to 255.",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      }
     }
   }
 }
