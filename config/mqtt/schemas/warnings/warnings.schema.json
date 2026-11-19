@@ -4,6 +4,8 @@
   "title": "Warnings",
   "description": "Raw warning output from the pod. Encoded as a byte string.",
   "$ref": "#/$defs/bytes",
+  "minItems": 0,
+  "maxItems": 16,
   "$defs": {
     "uint": {
       "$anchor": "uint",
@@ -49,8 +51,8 @@
       "$anchor": "float32",
       "description": "Number within IEEE 754 single-precision range. Precision is not enforced.",
       "type": "number",
-      "minimum": -3.4028234663852886e+38,
-      "maximum": 3.4028234663852886e+38
+      "minimum": -3.4028234663852886e38,
+      "maximum": 3.4028234663852886e38
     },
     "bytes": {
       "$anchor": "bytes",
