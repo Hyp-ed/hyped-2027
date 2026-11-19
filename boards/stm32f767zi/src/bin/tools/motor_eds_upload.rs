@@ -2,8 +2,9 @@
 #![no_main]
 
 //! Uploads the EDS file stored on the motor controller (object 0x1021 "Store EDS")
-//! using an SDO upload (initiate + segmented transfer), and prints it over defmt
-//! line by line.
+//! using an SDO upload (initiate + segmented transfer), and prints the raw bytes over defmt
+//! as a single `EDS = [0x.., ...]` array split over several lines. The data may be binary (e.g. zipped, see 0x1022), so nothing is
+//! interpreted on the device; reassemble it on the host with `scripts/decode_eds.py`.
 
 use defmt::*;
 use defmt_rtt as _;
@@ -17,7 +18,8 @@ use embassy_stm32::{
     peripherals::CAN1,
 };
 use embassy_time::{with_timeout, Duration};
-use heapless::Vec;
+use core::fmt::Write;
+use heapless::{String, Vec};
 use panic_probe as _;
 
 const NODE_ID: u8 = 0x01;
@@ -32,7 +34,9 @@ const ABORT_TIMEOUT: u32 = 0x0504_0000;
 const ABORT_INVALID_CS: u32 = 0x0504_0001;
 const ABORT_TOGGLE: u32 = 0x0503_0000;
 
-const MAX_LINE_LEN: usize = 256;
+const MAX_CHUNK_LEN: usize = 64;
+/// "0xNN, " per byte
+const MAX_CHUNK_STR_LEN: usize = MAX_CHUNK_LEN * 6;
 
 bind_interrupts!(struct Irqs {
     CAN1_RX0 => Rx0InterruptHandler<CAN1>;
@@ -98,17 +102,19 @@ async fn main(_spawner: Spawner) {
     }
 }
 
-/// Uploads 0x1021:00 and prints it line by line. Returns the number of bytes received.
+/// Uploads 0x1021:00 and prints it as a single hex array. Returns the number of bytes received.
 async fn upload_eds(tx: &mut CanTx<'_>, rx: &mut CanRx<'_>) -> Result<u32, SdoError> {
-    let mut line: Vec<u8, MAX_LINE_LEN> = Vec::new();
+    let mut chunk: Vec<u8, MAX_CHUNK_LEN> = Vec::new();
     let mut total: u32 = 0;
 
     match upload_initiate(tx, rx, STORE_EDS_INDEX, 0x00).await? {
         InitiateResponse::Expedited { data, len } => {
+            println!("EDS = [");
             for &b in &data[..len] {
-                push_byte(&mut line, b);
+                push_byte(&mut chunk, b);
             }
-            flush_line(&mut line);
+            flush_chunk(&mut chunk);
+            println!("]");
             return Ok(len as u32);
         }
         InitiateResponse::Segmented { size } => match size {
@@ -116,6 +122,8 @@ async fn upload_eds(tx: &mut CanTx<'_>, rx: &mut CanRx<'_>) -> Result<u32, SdoEr
             None => info!("EDS size not indicated"),
         },
     }
+
+    println!("EDS = [");
 
     let mut toggle = false;
     loop {
@@ -138,12 +146,13 @@ async fn upload_eds(tx: &mut CanTx<'_>, rx: &mut CanRx<'_>) -> Result<u32, SdoEr
         let last = cmd & 0x01 == 1;
 
         for &b in &response[1..8 - unused] {
-            push_byte(&mut line, b);
+            push_byte(&mut chunk, b);
         }
         total += (7 - unused) as u32;
 
         if last {
-            flush_line(&mut line);
+            flush_chunk(&mut chunk);
+            println!("]");
             return Ok(total);
         }
         toggle = !toggle;
@@ -241,27 +250,23 @@ async fn abort(tx: &mut CanTx<'_>, index: u16, sub_index: u8, code: u32) {
     tx.write(&unwrap!(Frame::new_data(id, &data))).await;
 }
 
-/// Appends a byte to the line buffer, printing the line on newline or when the buffer is full.
-fn push_byte(line: &mut Vec<u8, MAX_LINE_LEN>, b: u8) {
-    match b {
-        b'\n' => flush_line(line),
-        b'\r' => {}
-        _ => {
-            if line.push(b).is_err() {
-                flush_line(line);
-                let _ = line.push(b);
-            }
-        }
+/// Appends a byte to the chunk buffer, printing the chunk when the buffer is full.
+fn push_byte(chunk: &mut Vec<u8, MAX_CHUNK_LEN>, b: u8) {
+    if chunk.push(b).is_err() {
+        flush_chunk(chunk);
+        let _ = chunk.push(b);
     }
 }
 
-fn flush_line(line: &mut Vec<u8, MAX_LINE_LEN>) {
-    if line.is_empty() {
+fn flush_chunk(chunk: &mut Vec<u8, MAX_CHUNK_LEN>) {
+    if chunk.is_empty() {
         return;
     }
-    match core::str::from_utf8(line) {
-        Ok(s) => println!("{=str}", s),
-        Err(_) => println!("{=[u8]:02x}", line.as_slice()),
+    // Print the bytes without brackets so consecutive lines join into one array
+    let mut line: String<MAX_CHUNK_STR_LEN> = String::new();
+    for &b in chunk.iter() {
+        let _ = core::write!(line, "0x{:02x}, ", b);
     }
-    line.clear();
+    println!("{=str}", line.as_str());
+    chunk.clear();
 }

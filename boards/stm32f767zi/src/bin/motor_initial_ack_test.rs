@@ -50,28 +50,28 @@ async fn main(spawner: Spawner) {
     let (tx, mut rx) = can.split();
     static TX: StaticCell<Mutex<CriticalSectionRawMutex, CanTx<'static>>> = StaticCell::new();
     let tx: SharedTx = TX.init(Mutex::new(tx));
-
-    match rx.read().await {
-        Ok(envelope) => {
-            let frame = envelope.frame;
-            match frame.id() {
-                embassy_stm32::can::Id::Standard(id) => {
-                    const BOOT_UP_ID: u16 = 0x700;
-                    defmt::assert_eq!(id.as_raw(), BOOT_UP_ID + NODE_ID as u16);
-                }
-                embassy_stm32::can::Id::Extended(id) => {
-                    defmt::panic!(
-                        "Bad bootup frame id: Expected standard, received extended: {}",
-                        id.as_raw()
-                    )
-                }
-            }
-        }
-        Err(e) => {
-            error!("{}", e);
-        }
-    }
-
+    //
+    // match rx.read().await {
+    //     Ok(envelope) => {
+    //         let frame = envelope.frame;
+    //         match frame.id() {
+    //             embassy_stm32::can::Id::Standard(id) => {
+    //                 const BOOT_UP_ID: u16 = 0x700;
+    //                 defmt::assert_eq!(id.as_raw(), BOOT_UP_ID + NODE_ID as u16);
+    //             }
+    //             embassy_stm32::can::Id::Extended(id) => {
+    //                 defmt::panic!(
+    //                     "Bad bootup frame id: Expected standard, received extended: {}",
+    //                     id.as_raw()
+    //                 )
+    //             }
+    //         }
+    //     }
+    //     Err(e) => {
+    //         error!("{}", e);
+    //     }
+    // }
+    //
     info!("Received bootup frame!");
 
     unwrap!(spawner.spawn(can_receiver(rx)));
@@ -189,6 +189,8 @@ async fn main(spawner: Spawner) {
         set_controlword(tx, &frames, CONTROLWORD_FAULT_RESET).await;
         wait_for_state(tx, &frames, DriveState::SwitchOnDisabled).await;
     }
+
+    Timer::after(Duration::from_secs(60)).await;
 
     info!("Sending Shutdown message...");
     set_controlword(tx, &frames, Messages::Shutdown).await;
@@ -331,8 +333,6 @@ const TPDO_DEFAULT_COB_IDS: [u16; 4] = [
 const TPDO0_COB_ID: u16 = TPDO_DEFAULT_COB_IDS[0];
 /// CiA 301 COB-ID bit 31: set means the PDO is *not* valid (disabled)
 const PDO_COB_ID_INVALID: u32 = 1 << 31;
-/// CiA 301 COB-ID bit 30: set means RTR is *not* allowed
-const PDO_COB_ID_NO_RTR: u32 = 1 << 30;
 /// Synchronous cyclic: sent once after every SYNC
 const TPDO0_TRANSMISSION_TYPE: u32 = 0x01;
 
@@ -393,13 +393,20 @@ async fn configure_tpdo0(tx: SharedTx, frames: &FrameReceiver) {
     assert_not_abort(&cob);
     info!("TPDO 0 current COB-ID: {=u32:#010x}", cob.data);
 
-    // CiA 301: the PDO must be disabled before its parameters or mapping can change
-    configure(
-        tx,
-        frames,
-        sdo_write(TPDO_COMM_INDEX, 0x01, 4, cob.data | PDO_COB_ID_INVALID),
-    )
-    .await;
+    // CiA 301: the PDO must be disabled before its parameters or mapping can change. This drive
+    // has 0x2084 (Allow PDO COB-ID change) = 0 and may refuse any COB-ID write, in which case we
+    // try to change the mapping with the PDO still enabled.
+    let disable: CanOpenMessage =
+        sdo_write(TPDO_COMM_INDEX, 0x01, 4, cob.data | PDO_COB_ID_INVALID).into();
+    send_sdo(tx, disable.clone()).await;
+    let disable_ack = read_sdo_response(frames, disable.index, disable.sub_index).await;
+    let disabled = disable_ack.command != SDO_ABORT;
+    if !disabled {
+        warn!(
+            "Drive refused to disable TPDO 0 (abort {=u32:#010x}), changing mapping while enabled",
+            disable_ack.data
+        );
+    }
 
     configure(
         tx,
@@ -429,18 +436,17 @@ async fn configure_tpdo0(tx: SharedTx, frames: &FrameReceiver) {
     )
     .await;
 
-    configure(
-        tx,
-        frames,
-        sdo_write(
-            TPDO_COMM_INDEX,
-            0x01,
-            4,
-            PDO_COB_ID_NO_RTR | u32::from(TPDO0_COB_ID),
-        ),
-    )
-    .await;
-    info!("TPDO 0 enabled on COB-ID {=u16:#x}", TPDO0_COB_ID);
+    // Re-enable with the drive's own COB-ID, only clearing bit 31
+    let enabled_cob = cob.data & !PDO_COB_ID_INVALID;
+    if disabled {
+        configure(
+            tx,
+            frames,
+            sdo_write(TPDO_COMM_INDEX, 0x01, 4, enabled_cob),
+        )
+        .await;
+    }
+    info!("TPDO 0 enabled on COB-ID {=u32:#x}", enabled_cob & 0x7FF);
 }
 
 /// Decode a TPDO 0 frame according to `TPDO0_MAPPING`

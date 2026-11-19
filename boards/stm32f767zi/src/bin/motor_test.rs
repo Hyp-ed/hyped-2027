@@ -33,8 +33,8 @@ async fn main(spawner: Spawner) {
 
     info!("Setting up CAN1 (main bus)...");
     static CAN: StaticCell<Can<'static>> = StaticCell::new();
-    // let can = CAN.init(Can::new(p.CAN1, p.PD0, p.PD1, Irqs));
-    let can = CAN.init(Can::new(p.CAN1, p.PB8, p.PB9, Irqs));
+    let can = CAN.init(Can::new(p.CAN1, p.PD0, p.PD1, Irqs));
+    // let can = CAN.init(Can::new(p.CAN1, p.PB8, p.PB9, Irqs));
 
     can.modify_filters()
         .enable_bank(0, Fifo::Fifo0, Mask32::accept_all());
@@ -115,28 +115,16 @@ async fn main(spawner: Spawner) {
     info!("Incrementing Test Mode Command to 1000...");
 
     info!("Setting Test Mode Command to 200");
-    send_motor_message(&mut tx, Messages::TestModeCommand(200)).await;
-    Timer::after(Duration::from_secs(3)).await;
-
-    info!("Setting Test Mode Command to 400");
-    send_motor_message(&mut tx, Messages::TestModeCommand(400)).await;
-    Timer::after(Duration::from_secs(3)).await;
-
-    info!("Setting Test Mode Command to 600");
-    send_motor_message(&mut tx, Messages::TestModeCommand(600)).await;
-    Timer::after(Duration::from_secs(3)).await;
-
-    info!("Setting Test Mode Command to 800");
-    send_motor_message(&mut tx, Messages::TestModeCommand(800)).await;
-    Timer::after(Duration::from_secs(3)).await;
-
-    info!("Setting Test Mode Command to 1000");
-    send_motor_message(&mut tx, Messages::TestModeCommand(1000)).await;
-    Timer::after(Duration::from_secs(3)).await;
-
-    info!("Ramping down Test Mode Command to 0...");
-    send_motor_message(&mut tx, Messages::TestModeCommand(500)).await;
-    Timer::after(Duration::from_secs(3)).await;
+    for i in 0..5 {
+        send_motor_message(&mut tx, Messages::TestModeCommand(200)).await;
+        Timer::after(Duration::from_secs(3)).await;
+        send_motor_message(&mut tx, Messages::TestModeCommand(400)).await;
+        Timer::after(Duration::from_secs(3)).await;
+        send_motor_message(&mut tx, Messages::TestModeCommand(200)).await;
+        Timer::after(Duration::from_secs(3)).await;
+        send_motor_message(&mut tx, Messages::TestModeCommand(400)).await;
+        Timer::after(Duration::from_secs(3)).await;
+    }
 
     info!("Stopping motor...");
     send_motor_message(&mut tx, Messages::EnterStopState).await;
