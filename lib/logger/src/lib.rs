@@ -40,9 +40,6 @@ pub struct Buffer<const N: usize> {
 
 // ring buffer
 impl<const N: usize> Buffer<N> {
-    fn default() -> Self {
-        Self::new()
-    }
     pub const fn new() -> Self {
         Buffer {
             buf: [0; N],
@@ -89,7 +86,11 @@ impl<const N: usize> Buffer<N> {
         N
     }
 }
-
+impl<const N: usize> Default for Buffer<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 #[cfg(target_os = "none")]
 #[defmt::global_logger]
 struct Logger;
