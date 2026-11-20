@@ -40,6 +40,9 @@ pub struct Buffer<const N: usize> {
 
 // ring buffer
 impl<const N: usize> Buffer<N> {
+    fn default() -> Self {
+        Self::new()
+    }
     pub const fn new() -> Self {
         Buffer {
             buf: [0; N],
@@ -63,7 +66,7 @@ impl<const N: usize> Buffer<N> {
     pub fn write_pos(&self) -> usize {
         self.write
     }
-    pub fn truncate_to(&mut self, pos: usize) -> () {
+    pub fn truncate_to(&mut self, pos: usize) {
         self.write = pos;
     }
     pub fn len(&self) -> usize {
