@@ -1,0 +1,11 @@
+[package]
+name = "hyped-logger"
+version = "0.1.0"
+
+[lints]
+workspace = true
+
+[dependencies]
+defmt = "0.3"
+critical-section = "1"
+
