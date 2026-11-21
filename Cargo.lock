@@ -454,6 +454,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyped-logger"
+version = "0.1.0"
+dependencies = [
+ "critical-section",
+ "defmt 0.3.100",
+]
+
+[[package]]
 name = "hyped_adc"
 version = "0.1.0"
 dependencies = [
