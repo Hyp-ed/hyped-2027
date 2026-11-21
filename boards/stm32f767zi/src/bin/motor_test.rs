@@ -89,11 +89,6 @@ async fn main(spawner: Spawner) {
     info!("CONFIG COMPLETE");
     Timer::after(Duration::from_secs(5)).await;
 
-    info!("Sending Preoperational message...");
-    send_motor_message(&mut tx, Messages::EnterPreoperationalState).await;
-    Timer::after(Duration::from_secs(30)).await;
-    wait_after_send().await;
-
     info!("Sending Operational message...");
     send_motor_message(&mut tx, Messages::EnterOperationalState).await;
     wait_after_send().await;
@@ -109,22 +104,27 @@ async fn main(spawner: Spawner) {
 
     info!("Sending Start Drive message...");
     send_motor_message(&mut tx, Messages::StartDrive).await;
-    Timer::after(Duration::from_secs(15)).await;
+    Timer::after(Duration::from_secs(45)).await;
 
     info!("Starting motor");
     info!("Incrementing Test Mode Command to 1000...");
 
     info!("Setting Test Mode Command to 200");
-    for i in 0..5 {
-        send_motor_message(&mut tx, Messages::TestModeCommand(200)).await;
-        Timer::after(Duration::from_secs(3)).await;
-        send_motor_message(&mut tx, Messages::TestModeCommand(400)).await;
-        Timer::after(Duration::from_secs(3)).await;
-        send_motor_message(&mut tx, Messages::TestModeCommand(200)).await;
-        Timer::after(Duration::from_secs(3)).await;
-        send_motor_message(&mut tx, Messages::TestModeCommand(400)).await;
-        Timer::after(Duration::from_secs(3)).await;
-    }
+    send_motor_message(&mut tx, Messages::TestModeCommand(200)).await;
+    Timer::after(Duration::from_secs(3)).await;
+
+    info!("Setting Test Mode Command to 400");
+    send_motor_message(&mut tx, Messages::TestModeCommand(400)).await;
+    Timer::after(Duration::from_secs(3)).await;
+    info!("Setting Test Mode Command to 600");
+    send_motor_message(&mut tx, Messages::TestModeCommand(600)).await;
+    Timer::after(Duration::from_secs(3)).await;
+    info!("Setting Test Mode Command to 800");
+    send_motor_message(&mut tx, Messages::TestModeCommand(800)).await;
+    Timer::after(Duration::from_secs(3)).await;
+    info!("Setting Test Mode Command to 1000");
+    send_motor_message(&mut tx, Messages::TestModeCommand(1000)).await;
+    Timer::after(Duration::from_secs(3)).await;
 
     info!("Stopping motor...");
     send_motor_message(&mut tx, Messages::EnterStopState).await;

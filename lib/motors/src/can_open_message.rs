@@ -72,7 +72,7 @@ pub mod config_messages {
         command: 0x2B,
         index: 0x2054,
         sub_index: 0x00,
-        data: 0x000001A4,
+        data: 450,
     };
 
     pub const MODES_OF_OPERATION: CanOpenMessage = CanOpenMessage {

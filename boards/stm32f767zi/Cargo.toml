@@ -83,3 +83,7 @@ path = "src/bin/tools/i2cdetect.rs"
 [[bin]]
 name = "motor_eds_upload"
 path = "src/bin/tools/motor_eds_upload.rs"
+
+[[bin]]
+name = "reset_motor"
+path = "src/bin/tools/reset_motor.rs"
