@@ -2,16 +2,37 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "file:///schemas/warnings/warnings.schema.json",
   "title": "Warnings",
-  "description": "Raw warning output from the pod. Encoded as a byte string.",
-  "$ref": "#/$defs/bytes",
-  "minItems": 0,
-  "maxItems": 16,
+  "description": "Raw warning output from the pod. Encoded as an array of a uint8 and a byte string of up to 16 bytes.",
+  "type": "array",
+  "prefixItems": [
+    {
+      "title": "Board",
+      "description": "The board that logged this",
+      "$ref": "#/$defs/uint8"
+    },
+    {
+      "title": "Data",
+      "description": "Raw warning bytes.",
+      "$ref": "#/$defs/bytes",
+      "minItems": 0,
+      "maxItems": 16
+    }
+  ],
+  "items": false,
+  "minItems": 2,
   "$defs": {
     "uint": {
       "$anchor": "uint",
       "description": "Unsigned integer (CBOR major type 0).",
       "type": "integer",
       "minimum": 0
+    },
+    "uint8": {
+      "$anchor": "uint8",
+      "description": "Unsigned 8-bit integer: 0 to 255.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
     },
     "uint16": {
       "$anchor": "uint16",

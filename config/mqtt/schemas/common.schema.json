@@ -10,6 +10,13 @@
       "type": "integer",
       "minimum": 0
     },
+    "uint8": {
+      "$anchor": "uint8",
+      "description": "Unsigned 8-bit integer: 0 to 255.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
     "uint16": {
       "$anchor": "uint16",
       "description": "Unsigned 16-bit integer: 0 to 65535.",
