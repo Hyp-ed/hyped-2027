@@ -8,5 +8,5 @@ type DBError struct{
 }
 
 func (e *DBError) Error() string {
-	return fmt.Sprintln("Database Error: %s, Reason: %s", e.ReasonFrom, e.DBErrorMessage)
+	return fmt.Sprintf("Database Error: %s, Reason: %s", e.ReasonFrom, e.DBErrorMessage)
 }

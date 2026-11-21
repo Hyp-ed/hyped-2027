@@ -98,7 +98,10 @@ func main() {
 				html = "index.html"
 			}
 			if f, err := subFS.Open(html); err == nil {
-				f.Close()
+				err := f.Close()
+				if err != nil {
+					return routes.ErrorErrorError(c)
+				}
 				if content, readErr := fs.ReadFile(subFS, html); readErr == nil {
 					c.Type("html")
 					return c.Send(content)

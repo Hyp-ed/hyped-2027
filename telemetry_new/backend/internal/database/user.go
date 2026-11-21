@@ -116,7 +116,6 @@ type Role struct {
 func ListOfRoles(db *sql.DB) ([]Role, error) {
 	var roles []Role
 	rolesQuery, err := db.Query(`SELECT roles.id, roles.name FROM roles;`)
-	defer rolesQuery.Close()
 	if err != nil {
 		return nil, &errors.DBError{ReasonFrom: "error while fetching for roles.", DBErrorMessage: err.Error()}
 	}
@@ -136,6 +135,10 @@ func ListOfRoles(db *sql.DB) ([]Role, error) {
 		role.Permissions = permissions
 		roles = append(roles, role)
 	}
+	err = rolesQuery.Close()
+	if err != nil {
+		return nil, &errors.DBError{ReasonFrom: "error while fetching for roles.", DBErrorMessage: err.Error()}
+	}
 	return roles, nil
 }
 
@@ -148,7 +151,6 @@ func GetPermissionsByRole(db *sql.DB, roleID string) ([]Permission, error) {
 	if err != nil {
 		return nil, &errors.DBError{ReasonFrom: "error while fetching for permissions.", DBErrorMessage: err.Error()}
 	}
-	defer permissionsQuery.Close()
 	for permissionsQuery.Next() {
 		if permissionsQuery.Err() != nil {
 			return nil, &errors.DBError{ReasonFrom: "error while fetching for permissions.", DBErrorMessage: err.Error()}
@@ -159,6 +161,10 @@ func GetPermissionsByRole(db *sql.DB, roleID string) ([]Permission, error) {
 			return nil, &errors.DBError{ReasonFrom: "error while fetching for permissions.", DBErrorMessage: err.Error()}
 		}
 		permissions = append(permissions, permission)
+	}
+	err = permissionsQuery.Close()
+	if err != nil {
+		return nil, &errors.DBError{ReasonFrom: "error while fetching for permissions.", DBErrorMessage: err.Error()}
 	}
 	return permissions, nil
 }

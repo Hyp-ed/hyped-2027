@@ -4,9 +4,11 @@
 
 - `backend` contains the backend using go fiber
 
-- `frontend` contains the front end which would be design by the marketing team and make with SvelteKit
+- `frontend` contains the front end which would be make with SvelteKit
 
 - `swagger` contains the config file of swagger
+
+- `database` contains some essential database scripts
 
 ## How to run
 
@@ -16,7 +18,7 @@
 To run the development environment that includes:
 
 - Backend (Air - Golang will automatically refresh)
-- Frontend (SOON)
+- Frontend (Rebuilt by default if you restart the container with `--build` flag)
 - Swagger Docs
 - PostgresDB (Store authentication)
 - Adminer (The database management software for **DEBUGGING ONLY**)
@@ -40,20 +42,20 @@ To get live build log messages of the backend do `docker compose logs air -f`
 
 To navigate to the swagger UI (the API docs) go to `localhost:8080`
 
-## New backend plans
+### Database
 
-- [x] implement swagger docs into docker compose
-- [ ] implement swagger docs - authentication
-- [ ] implement swagger docs - public app
-- [ ] implement swagger docs - state transition
-- [ ] implement all the API end point written by the docs
+The database have it's entry point from `database/entry_point_script`
 
-## The API directory
+### Frontend
 
-`/` - public data page
-`/auth/login` & `/auth/signup`
-`/dashboard` will be protected
-`/protected-api/`
+The frontend will be rebuilt when you start the docker compose.
+
+> [!IMPORTANT]
+> To update the front end you must rebuilt the docker compose.
+> Stop the current docker compose
+> `docker compose down -v`
+> Then restart and build the docker compose
+> `docker compose up -d --force-recreate --build`
 
 ## Swagger Docs
 
