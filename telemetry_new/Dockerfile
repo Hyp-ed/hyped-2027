@@ -23,7 +23,7 @@ RUN go mod download
 
 # Build!
 COPY backend .
-COPY --from=nodebuild /nodebuild/build ./frontend_build
+COPY --from=nodebuild /nodebuild/build ./internal/consts/frontend_build
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /binary
 
