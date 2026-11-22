@@ -1,10 +1,13 @@
 name: Create and Publish and Deploy Docker Image for the Telemetry code
 
-on: push
+on:
+  push:
+    branches:
+      - 'main'
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: telemetry2027
+  IMAGE_NAME: hyp-ed/telemetry2027
 
 jobs:
   build-and-push-image:
