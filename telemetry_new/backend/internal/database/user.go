@@ -2,12 +2,9 @@
 package database
 
 import (
-	"database/sql"
 	"time"
-
 	"hyped/backend_telemetry/internal/auth"
 	"hyped/backend_telemetry/internal/errors"
-
 	"github.com/google/uuid"
 )
 
@@ -19,7 +16,8 @@ type User struct {
 	CreatedAt    time.Time
 }
 
-func CreateUser(db *sql.DB, email string, name string, password string) (*User, error) {
+func CreateUser(email string, name string, password string) (*User, error) {
+	db := Get()
 	passwordhash, err := auth.HashPassword(password)
 	if err != nil {
 		return nil, err
@@ -41,7 +39,8 @@ func ResetUserPassword(id uuid.UUID) (string, error) {
 	return "", &errors.UserError{ReasonFrom: "Cannot reset a user's password"}
 }
 
-func VerifyUser(db *sql.DB, email string, password string) error {
+func VerifyUser(email string, password string) error {
+	db := Get()
 	var passwordHash string
 	rows := db.QueryRow(`SELECT users.password_hash FROM users WHERE users.email = $1;`, email)
 	if err := rows.Scan(&passwordHash); err != nil {
@@ -53,7 +52,8 @@ func VerifyUser(db *sql.DB, email string, password string) error {
 	return nil
 }
 
-func GetUserByEmail(db *sql.DB, email string) (*User, error) {
+func GetUserByEmail(email string) (*User, error) {
+	db := Get()
 	user := User{}
 	rows := db.QueryRow(`SELECT users.id, users.password_hash, users.email, users.name, users.created_at FROM users WHERE users.email = $1;`, email)
 	if err := rows.Scan(&user.ID, &user.PasswordHash, &user.Email, &user.Name, &user.CreatedAt); err != nil {
@@ -63,7 +63,8 @@ func GetUserByEmail(db *sql.DB, email string) (*User, error) {
 	}
 }
 
-func CheckUserExistsByEmail(db *sql.DB, email string) error {
+func CheckUserExistsByEmail(email string) error {
+	db := Get()
 	rows := db.QueryRow(`SELECT EXISTS
 		(SELECT 1 FROM users 
 		WHERE users.email = $1);`, email)
@@ -76,7 +77,8 @@ func CheckUserExistsByEmail(db *sql.DB, email string) error {
 	}
 }
 
-func CheckPermission(db *sql.DB, user *User, permission string) error {
+func CheckPermission(user *User, permission string) error {
+	db := Get()
 	rows := db.QueryRow(`SELECT EXISTS
 		(SELECT 1 FROM users 
 		INNER JOIN users_role ON users_role.user_id = users.id 
@@ -92,7 +94,8 @@ func CheckPermission(db *sql.DB, user *User, permission string) error {
 	}
 }
 
-func AddUserToRoles(db *sql.DB, user *User, roles string) error {
+func AddUserToRoles(user *User, roles string) error {
+	db := Get()
 	_, err := db.Query(`INSERT INTO users_role (role_id, user_id)
 SELECT roles.id, users.id FROM roles, users
 WHERE users.id = $1 AND roles.name = $2;`, user.ID, roles)
@@ -113,7 +116,8 @@ type Role struct {
 	Permissions []Permission
 }
 
-func ListOfRoles(db *sql.DB) ([]Role, error) {
+func ListOfRoles() ([]Role, error) {
+	db := Get()
 	var roles []Role
 	rolesQuery, err := db.Query(`SELECT roles.id, roles.name FROM roles;`)
 	if err != nil {
@@ -128,7 +132,7 @@ func ListOfRoles(db *sql.DB) ([]Role, error) {
 		if err != nil {
 			return nil, &errors.DBError{ReasonFrom: "error while fetching for roles.", DBErrorMessage: err.Error()}
 		}
-		permissions, err := GetPermissionsByRole(db, role.ID)
+		permissions, err := GetPermissionsByRole(role.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +146,8 @@ func ListOfRoles(db *sql.DB) ([]Role, error) {
 	return roles, nil
 }
 
-func GetPermissionsByRole(db *sql.DB, roleID string) ([]Permission, error) {
+func GetPermissionsByRole(roleID string) ([]Permission, error) {
+	db := Get()
 	var permissions []Permission
 	permissionsQuery, err := db.Query(`SELECT permissions.name, permissions.id 
 			FROM role_permissions
