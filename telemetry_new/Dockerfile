@@ -27,6 +27,8 @@ COPY --from=nodebuild /nodebuild/build ./frontend_build
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /binary
 
+FROM scratch
+COPY --from=gobinary /binary /binary
 EXPOSE 8000/tcp
 
 ENV POSTGRES_HOST=db
