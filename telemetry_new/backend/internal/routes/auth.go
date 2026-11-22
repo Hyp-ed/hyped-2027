@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"database/sql"
 	"net/mail"
 	"time"
 	"hyped/backend_telemetry/internal/auth"
@@ -14,12 +13,12 @@ type UserRequest struct {
 	Password string `json:"password"`
 }
 
-func Login(c fiber.Ctx, db *sql.DB) error {
+func Login(c fiber.Ctx) error {
 	userRequest := new(UserRequest)
 	if err := c.Bind().Body(userRequest); err != nil {
 		return c.JSON(fiber.Map{"success": false})
 	}
-	if err := database.VerifyUser(db, userRequest.Email, userRequest.Password); err != nil {
+	if err := database.VerifyUser(userRequest.Email, userRequest.Password); err != nil {
 		return c.JSON(fiber.Map{"success": false})
 	}
 	token, err := auth.CreateToken(userRequest.Email)
@@ -38,7 +37,7 @@ type NewUserRequest struct {
 	Password string `json:"password"`
 }
 
-func CreateNewUser(c fiber.Ctx, db *sql.DB) error {
+func CreateNewUser(c fiber.Ctx) error {
 	userRequest := new(NewUserRequest)
 	if err := c.Bind().Body(userRequest); err != nil {
 		return c.JSON(fiber.Map{"message": "Parse JSON failed", "success": false})
@@ -47,42 +46,47 @@ func CreateNewUser(c fiber.Ctx, db *sql.DB) error {
 	if err != nil {
 		return c.JSON(fiber.Map{"message": "Mail was not parsed", "success": false})
 	}
-	user, err := database.CreateUser(db, userRequest.Email, userRequest.Name, userRequest.Password)
+	user, err := database.CreateUser(userRequest.Email, userRequest.Name, userRequest.Password)
 	if err != nil {
 		return c.JSON(fiber.Map{"message": "Database Error or duplicated email", "success": false})
 	}
 	return c.JSON(fiber.Map{"message": "New user created", "success": true, "userID": user.ID})
 }
 
-func Whoami(c fiber.Ctx, db *sql.DB) error {
+func Whoami(c fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	email, err := auth.VerifyBearerToken(authHeader)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"user_exists": false, "success": true})
 	}
-	user,err := database.GetUserByEmail(db, email)
+	user,err := database.GetUserByEmail(email)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"user_exists": false, "success": true})
 	}
 	return c.Status(200).JSON(fiber.Map{"user_exists": true, "success": true, "name": user.Name, "email": email, "created": user.CreatedAt})
 }
 
-func GetRoles(c fiber.Ctx, db *sql.DB) error {
-	roles, err := database.ListOfRoles(db)
+func GetRoles(c fiber.Ctx) error {
+	roles, err := database.ListOfRoles()
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"success": false})
 	}
 	return c.Status(200).JSON(fiber.Map{"success": true, "roles": roles})
 }
 
-func ProtectedPing(c fiber.Ctx, db *sql.DB) error {
+func ProtectedPing(c fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	email, err := auth.VerifyBearerToken(authHeader)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"success": false})
 	}
-	if database.CheckUserExistsByEmail(db, email) != nil {
+	if database.CheckUserExistsByEmail(email) != nil {
 		return c.Status(400).JSON(fiber.Map{"success": false})
 	}
 	return c.Status(200).JSON(fiber.Map{"response": "ping", "success": true})
+}
+
+func Logout(c fiber.Ctx) error {
+	c.ClearCookie("AuthToken")
+	return c.Redirect().Status(fiber.StatusMovedPermanently).To("/")
 }

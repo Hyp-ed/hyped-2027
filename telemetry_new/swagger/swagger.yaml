@@ -226,6 +226,20 @@ components:
         - id
         - name
         - icon
+    Whoami:
+      properties:
+        created:
+          type: string
+          example: "2026-11-22T19:46:41.534321Z"
+        name:
+          type: string
+          example: John Example
+        email:
+          type: string
+          example: "example@example.com"
+        success:
+          type: boolean
+          example: true
 
 paths:
   /auth/login:
@@ -253,35 +267,21 @@ paths:
           description: login unsuccessfully
     tags:
       - authentication
-  /auth/createAccount:
-    post:
-      summary: Create account
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - email
-                - password
-                - name
-              properties:
-                email:
-                  type: string
-                password:
-                  type: string
-                name:
-                  type: string
-      responses:
-        200:
-          description: account created successfully
-        400:
-          description: account created unsuccessfully
-    tags:
-      - authentication
-  /auth/signup:
+  /auth/api/whoami:
     get:
-      summary: signup
+      summary: Get the basic user overview
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Return the user overview
+          content:
+            application/json:
+              schema:
+                type: object
+                schema:
+                  $ref: "#/components/schemas/Whoami"
+                  
     tags:
       - authentication
   /auth/signout:

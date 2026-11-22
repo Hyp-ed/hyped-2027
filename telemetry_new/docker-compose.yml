@@ -15,7 +15,7 @@ services:
     working_dir: /go/src/hyped/backend_telemetry
     volumes:
         - ./backend:/go/src/hyped/backend_telemetry
-        - shared_frontend:/go/src/hyped/backend_telemetry/frontend_build
+        - shared_frontend:/go/src/hyped/backend_telemetry/internal/consts/frontend_build
     ports:
         - 8000:8000
     image: cosmtrek/air:latest
@@ -24,6 +24,7 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=example
       - POSTGRES_DB=user
+      - TEST=yes
     depends_on:
       frontendbuilder:
         condition: service_completed_successfully
