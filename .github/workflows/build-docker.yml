@@ -42,7 +42,7 @@ jobs:
         with:
           context: telemetry_new/.
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: latest 
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Generate artifact attestation
