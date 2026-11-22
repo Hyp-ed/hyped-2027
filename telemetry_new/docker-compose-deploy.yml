@@ -1,6 +1,6 @@
 # WARNING: CHANGE PASSWORD
 services:
-  air:
+  deployable:
     image: ghcr.io/hyp-ed/telemetry2027:latest
     restart: always
     shm_size: 128mb
@@ -9,6 +9,8 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=example
       - POSTGRES_DB=user
+    ports:
+      - 8000:8000
     depends_on:
       db:
         condition: service_healthy
