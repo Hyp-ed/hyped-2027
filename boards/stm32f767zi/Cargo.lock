@@ -772,6 +772,7 @@ dependencies = [
  "hyped_i2c",
  "hyped_i2c_derive",
  "hyped_localisation",
+ "hyped_logger",
  "hyped_motors",
  "hyped_sensors",
  "hyped_spi",
@@ -875,6 +876,14 @@ dependencies = [
  "hyped_core",
  "libm",
  "nalgebra",
+]
+
+[[package]]
+name = "hyped_logger"
+version = "0.1.0"
+dependencies = [
+ "critical-section",
+ "defmt",
 ]
 
 [[package]]

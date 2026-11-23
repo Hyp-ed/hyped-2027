@@ -31,7 +31,7 @@ const IDLE_DELAY: Duration = Duration::from_millis(5);
 pub async fn log_send(sinks: &'static [LogSender]) {
     let mut chunk = [0u8; CHUNK_SIZE];
     loop {
-        let mut n = hyped_logger::read(&mut chunk);
+        let n = hyped_logger::read(&mut chunk);
         if n == 0 {
             Timer::after(IDLE_DELAY).await;
             continue;
@@ -50,7 +50,7 @@ pub async fn log_send(sinks: &'static [LogSender]) {
     }
 }
 
-// TODO
+// Will be implemented later
 async fn send_to_can(_bytes: &[u8]) {}
 async fn send_to_uart(_bytes: &[u8]) {}
 async fn send_to_sd_card(_bytes: &[u8]) {}
