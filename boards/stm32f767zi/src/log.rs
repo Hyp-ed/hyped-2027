@@ -50,7 +50,7 @@ pub async fn log_send(sinks: &'static [LogSender]) {
     }
 }
 
-// Will be implemented later
+// TODOLater
 async fn send_to_can(_bytes: &[u8]) {}
 async fn send_to_uart(_bytes: &[u8]) {}
 async fn send_to_sd_card(_bytes: &[u8]) {}

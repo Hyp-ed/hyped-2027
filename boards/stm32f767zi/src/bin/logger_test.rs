@@ -26,7 +26,10 @@
 use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use embassy_executor::Spawner;
-use embassy_stm32::interrupt::{self, InterruptExt, Priority};
+use embassy_stm32::{
+    interrupt,
+    interrupt::{InterruptExt, Priority},
+};
 use embassy_time::{Duration, Instant, Timer};
 use rtt_target::{rtt_init, ChannelMode, UpChannel};
 
