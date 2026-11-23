@@ -33,3 +33,10 @@ macro_rules! default_can_config {
         $can.modify_config().set_bitrate(500_000);
     };
 }
+
+#[macro_export]
+macro_rules! start_logging {
+    ($spawner:expr, $($sink:ident),+ $(,)?) => {
+        $spawner.must_spawn($crate::log::log_send(&[$($crate::log::LogSender::sink),+]))
+    };
+}
