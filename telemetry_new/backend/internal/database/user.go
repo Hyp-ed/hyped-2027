@@ -2,13 +2,9 @@
 package database
 
 import (
-	"database/sql"
-	"log"
 	"time"
-
 	"hyped/backend_telemetry/internal/auth"
 	"hyped/backend_telemetry/internal/errors"
-
 	"github.com/google/uuid"
 )
 
@@ -20,7 +16,8 @@ type User struct {
 	CreatedAt    time.Time
 }
 
-func CreateUser(db *sql.DB, email string, name string, password string) (*User, error) {
+func CreateUser(email string, name string, password string) (*User, error) {
+	db := Get()
 	passwordhash, err := auth.HashPassword(password)
 	if err != nil {
 		return nil, err
@@ -42,21 +39,21 @@ func ResetUserPassword(id uuid.UUID) (string, error) {
 	return "", &errors.UserError{ReasonFrom: "Cannot reset a user's password"}
 }
 
-func VerifyUser(db *sql.DB, email string, password string) error {
+func VerifyUser(email string, password string) error {
+	db := Get()
 	var passwordHash string
 	rows := db.QueryRow(`SELECT users.password_hash FROM users WHERE users.email = $1;`, email)
 	if err := rows.Scan(&passwordHash); err != nil {
-		log.Println(err)
 		return &errors.UserError{ReasonFrom: "Either email or password were wrong"}
 	}
 	if err := auth.VerifyPassword(passwordHash, password); err != nil {
-		log.Println(err)
 		return &errors.UserError{ReasonFrom: "Either email or password were wrong"}
 	}
 	return nil
 }
 
-func GetUserByEmail(db *sql.DB, email string) (*User, error) {
+func GetUserByEmail(email string) (*User, error) {
+	db := Get()
 	user := User{}
 	rows := db.QueryRow(`SELECT users.id, users.password_hash, users.email, users.name, users.created_at FROM users WHERE users.email = $1;`, email)
 	if err := rows.Scan(&user.ID, &user.PasswordHash, &user.Email, &user.Name, &user.CreatedAt); err != nil {
@@ -66,7 +63,22 @@ func GetUserByEmail(db *sql.DB, email string) (*User, error) {
 	}
 }
 
-func CheckPermission(db *sql.DB, user *User, permission string) error {
+func CheckUserExistsByEmail(email string) error {
+	db := Get()
+	rows := db.QueryRow(`SELECT EXISTS
+		(SELECT 1 FROM users 
+		WHERE users.email = $1);`, email)
+
+	var output bool
+	if err := rows.Scan(&output); err != nil {
+		return &errors.UserError{ReasonFrom: "User doesn't exists"}
+	} else {
+		return nil
+	}
+}
+
+func CheckPermission(user *User, permission string) error {
+	db := Get()
 	rows := db.QueryRow(`SELECT EXISTS
 		(SELECT 1 FROM users 
 		INNER JOIN users_role ON users_role.user_id = users.id 
@@ -76,9 +88,89 @@ func CheckPermission(db *sql.DB, user *User, permission string) error {
 
 	var output bool
 	if err := rows.Scan(&output); err != nil {
-		log.Println("Error while reading for user")
 		return &errors.UserError{ReasonFrom: "User doesn't exists or user doesn't have permission"}
 	} else {
 		return nil
 	}
 }
+
+func AddUserToRoles(user *User, roles string) error {
+	db := Get()
+	_, err := db.Query(`INSERT INTO users_role (role_id, user_id)
+SELECT roles.id, users.id FROM roles, users
+WHERE users.id = $1 AND roles.name = $2;`, user.ID, roles)
+	if err != nil {
+		return &errors.UserError{ReasonFrom: "User or Roles doesn't exists or relation has been created already."}
+	}
+	return nil
+}
+
+type Permission struct {
+	Name string
+	ID   string
+}
+
+type Role struct {
+	Name        string
+	ID          string
+	Permissions []Permission
+}
+
+func ListOfRoles() ([]Role, error) {
+	db := Get()
+	var roles []Role
+	rolesQuery, err := db.Query(`SELECT roles.id, roles.name FROM roles;`)
+	if err != nil {
+		return nil, &errors.DBError{ReasonFrom: "error while fetching for roles.", DBErrorMessage: err.Error()}
+	}
+	for rolesQuery.Next() {
+		if rolesQuery.Err() != nil {
+			return nil, &errors.DBError{ReasonFrom: "error while fetching for roles.", DBErrorMessage: err.Error()}
+		}
+		var role Role
+		err := rolesQuery.Scan(&role.ID, &role.Name)
+		if err != nil {
+			return nil, &errors.DBError{ReasonFrom: "error while fetching for roles.", DBErrorMessage: err.Error()}
+		}
+		permissions, err := GetPermissionsByRole(role.ID)
+		if err != nil {
+			return nil, err
+		}
+		role.Permissions = permissions
+		roles = append(roles, role)
+	}
+	err = rolesQuery.Close()
+	if err != nil {
+		return nil, &errors.DBError{ReasonFrom: "error while fetching for roles.", DBErrorMessage: err.Error()}
+	}
+	return roles, nil
+}
+
+func GetPermissionsByRole(roleID string) ([]Permission, error) {
+	db := Get()
+	var permissions []Permission
+	permissionsQuery, err := db.Query(`SELECT permissions.name, permissions.id 
+			FROM role_permissions
+			INNER JOIN permissions ON permissions.id = role_permissions.permission_id
+			WHERE role_permissions.role_id = $1;`, roleID)
+	if err != nil {
+		return nil, &errors.DBError{ReasonFrom: "error while fetching for permissions.", DBErrorMessage: err.Error()}
+	}
+	for permissionsQuery.Next() {
+		if permissionsQuery.Err() != nil {
+			return nil, &errors.DBError{ReasonFrom: "error while fetching for permissions.", DBErrorMessage: err.Error()}
+		}
+		var permission Permission
+		err := permissionsQuery.Scan(&permission.ID, &permission.Name)
+		if err != nil {
+			return nil, &errors.DBError{ReasonFrom: "error while fetching for permissions.", DBErrorMessage: err.Error()}
+		}
+		permissions = append(permissions, permission)
+	}
+	err = permissionsQuery.Close()
+	if err != nil {
+		return nil, &errors.DBError{ReasonFrom: "error while fetching for permissions.", DBErrorMessage: err.Error()}
+	}
+	return permissions, nil
+}
+

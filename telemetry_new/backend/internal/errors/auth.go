@@ -8,5 +8,5 @@ type AuthError struct{
 }
 
 func (e *AuthError) Error() string {
-	return fmt.Sprintln("Auth Error: %s", e.ReasonFrom)
+	return fmt.Sprintf("Auth Error: %s", e.ReasonFrom)
 }

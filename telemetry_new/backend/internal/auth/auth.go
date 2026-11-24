@@ -2,17 +2,15 @@
 package auth
 
 import (
-	"hyped/backend_telemetry/internal/errors"
+	"strings"
 	"log"
 	"time"
-
+	"hyped/backend_telemetry/internal/errors"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
-	// Debug the sqlString
 )
 
 var secretKey = []byte("SUPER_SECRET_KEY_PLEASE_REPLACE_AT_PROD")
-
 // PLEASE REPLACE AT PRODUCTION!!!!!!
 
 // HashPassword creates a bcrypt hash from a plain-text password
@@ -45,17 +43,30 @@ func CreateToken(email string) (string, error) {
 	return tokenString, nil
 }
 
-func VerifyToken(tokenString string) error {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+// VerifyToken verifies the Token and return email if JWT not bad and claim is ok
+func VerifyToken(tokenString string) (string,error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return secretKey, nil
 	})
 	if err != nil {
-		return &errors.AuthError{ReasonFrom: "JWT Token Bad"}
-	}else{
-		if token.Valid {
-			return nil
-		}else{
-			return &errors.AuthError{ReasonFrom: "JWT Token Bad"}
-		}
+		return "",&errors.AuthError{ReasonFrom: "JWT Token Bad"}
 	}
+	if !token.Valid {
+		return "",&errors.AuthError{ReasonFrom: "JWT Token Bad"}
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "",&errors.AuthError{ReasonFrom: "JWT Token Bad"}
+	}
+	email,exists := claims["email"].(string)
+	if !exists {
+		return "",&errors.AuthError{ReasonFrom: "JWT Token Bad"}
+	}
+	return email, nil
+}
+
+// VerifyBearerToken is a simple wrapper for VerifyToken and takes in header as parameter
+func VerifyBearerToken(header string) (string,error) {
+	token := strings.Replace(header, "Bearer ", "",1)
+	return VerifyToken(token)
 }

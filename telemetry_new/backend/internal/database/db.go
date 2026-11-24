@@ -6,9 +6,19 @@ import (
 	"hyped/backend_telemetry/internal/errors"
 	"log"
 	"os"
-
+	"sync"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
+)
+
+type Store struct {
+	DB *sql.DB
+}
+
+var (
+	instance *Store
+	once sync.Once
+	initErr error
 )
 
 func PsqlConnectionString() string {
@@ -26,16 +36,25 @@ func PsqlConnectionString() string {
 	return sqlString
 }
 
+
 func Connect(connectionString string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", connectionString)
-	if err != nil {
-		return nil, &errors.DBError{ReasonFrom: "Database Connection Error", DBErrorMessage: err.Error()}
-	}
-	// Test the connection
-	if err := db.Ping(); err != nil {
-		return nil, &errors.DBError{ReasonFrom: "Database Ping Failed", DBErrorMessage: err.Error()}
-	}
-	log.Println("Database connected successfully")
-	return db, nil
+	once.Do(func () {
+		db, err := sql.Open("pgx", connectionString)
+		if err != nil {
+			initErr = &errors.DBError{ReasonFrom: "Database Connection Error", DBErrorMessage: err.Error()}
+			return
+		}
+		// Test the connection
+		if err := db.Ping(); err != nil {
+			initErr = &errors.DBError{ReasonFrom: "Database Ping Failed", DBErrorMessage: err.Error()}
+			return
+		}
+		instance = &Store{DB: db}
+		log.Println("Database connected successfully")
+	})
+	return instance.DB, initErr
 }
 
+func Get() *sql.DB{
+	return instance.DB
+}

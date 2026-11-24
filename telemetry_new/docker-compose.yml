@@ -15,6 +15,7 @@ services:
     working_dir: /go/src/hyped/backend_telemetry
     volumes:
         - ./backend:/go/src/hyped/backend_telemetry
+        - shared_frontend:/go/src/hyped/backend_telemetry/internal/consts/frontend_build
     ports:
         - 8000:8000
     image: cosmtrek/air:latest
@@ -23,6 +24,10 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=example
       - POSTGRES_DB=user
+      - TEST=yes
+    depends_on:
+      frontendbuilder:
+        condition: service_completed_successfully
 
   db:
     image: postgres
@@ -33,6 +38,8 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=example
       - POSTGRES_DB=user
+    volumes:
+      - ./database/entry_point_script/:/docker-entrypoint-initdb.d/
 
   adminer:
     image: msav/adminer-autologin:latest
@@ -46,3 +53,10 @@ services:
       ADMINER_DB: user          # Pre-fills the database name
       ADMINER_PASSWORD: example
       ADMINER_DESIGN: "default"
+  frontendbuilder:
+    build:
+      context: ./frontend
+    volumes:
+      - shared_frontend:/app/build
+volumes:
+  shared_frontend:

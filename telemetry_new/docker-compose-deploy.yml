@@ -1,0 +1,34 @@
+# WARNING: CHANGE PASSWORD
+services:
+  deployable:
+    image: ghcr.io/hyp-ed/telemetry2027:latest
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=user
+    ports:
+      - 8000:8000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=user
+    volumes:
+      - ./database/entry_point_script/:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

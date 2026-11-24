@@ -7,5 +7,5 @@ type UserError struct{
 }
 
 func (e *UserError) Error() string {
-	return fmt.Sprintln("User Error: %s", e.ReasonFrom)
+	return fmt.Sprintf("User Error: %s", e.ReasonFrom)
 }

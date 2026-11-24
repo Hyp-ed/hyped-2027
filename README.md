@@ -50,6 +50,9 @@ Our Wiki contains a guide on how to get started with Rust and `probe-rs` [here](
 
 ### Base Station (Node.js)
 
+> [!IMPORTANT]
+> For more details for the new Telemetry system go to [New Telemetry](https://github.com/Hyp-ed/hyped-2027/tree/main/telemetry_new)
+
 - [Node.js](https://nodejs.org/en/download/)
 - [pnpm](https://pnpm.io/installation)
 
@@ -73,6 +76,8 @@ cargo run --bin {your_code}
 
 ### Base Station (Telemetry)
 
+> [!IMPORTANT]
+> For more details for the new Telemetry system go to [New Telemetry](https://github.com/Hyp-ed/hyped-2027/tree/main/telemetry_new)
 > Note: The following should be run in the `telemetry` directory.
 
 To run the telemetry system, run the following command:
@@ -89,6 +94,7 @@ where `<pnpm_script>` is one of the scripts defined in `package.json`. E.g. `dev
 
 Our repository is structured as follows:
 
+- `telemetry_new`: Contains the new code base for the telemetry code both frontend and backend
 - `telemetry/`: Contains the base station code for the Telemetry server and GUI.
 - `lib/`: Contains the shared library code for the pod-side code and the base station.
   - `lib/core/`: Contains the core library code.
