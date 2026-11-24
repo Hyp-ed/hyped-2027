@@ -10,3 +10,4 @@ pub mod heartbeat;
 pub mod measurements;
 pub mod message_identifier;
 pub mod messages;
+pub mod structs;
