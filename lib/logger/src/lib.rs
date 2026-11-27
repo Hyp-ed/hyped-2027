@@ -90,94 +90,90 @@ impl<const N: usize> Default for Buffer<N> {
     }
 }
 #[cfg(target_os = "none")]
-mod logger {
+#[doc(hidden)]
+pub mod __private {
 
     use super::*;
     use core::sync::atomic::AtomicU8;
 
     static LOG_DEPTH: AtomicU8 = AtomicU8::new(0);
 
-    #[defmt::global_logger]
-    struct Logger;
+    pub fn acquire() {
+        let restore = unsafe { critical_section::acquire() };
 
-    unsafe impl defmt::Logger for Logger {
-        fn acquire() {
-            let restore = unsafe { critical_section::acquire() };
+        if LOG_DEPTH.load(Ordering::Relaxed) >= 1 {
+            NESTED_DROPPED.fetch_add(1, Ordering::Relaxed);
+            LOG_DEPTH.fetch_add(1, Ordering::Relaxed);
 
-            if LOG_DEPTH.load(Ordering::Relaxed) >= 1 {
-                NESTED_DROPPED.fetch_add(1, Ordering::Relaxed);
-                LOG_DEPTH.fetch_add(1, Ordering::Relaxed);
+            unsafe { critical_section::release(restore) };
+            return ();
+        }
+        LOG_DEPTH.store(1, Ordering::Relaxed);
 
-                unsafe { critical_section::release(restore) };
-                return ();
+        let state = unsafe { &mut *STATE.0.get() };
+        state.restore = restore;
+        state.frame_start = state.buffer.write_pos();
+        state.overflowed = false;
+
+        let State {
+            encoder,
+            buffer,
+            overflowed,
+            ..
+        } = state;
+        encoder.start_frame(|bytes| {
+            if !buffer.push(bytes) {
+                *overflowed = true;
             }
-            LOG_DEPTH.store(1, Ordering::Relaxed);
-
-            let state = unsafe { &mut *STATE.0.get() };
-            state.restore = restore;
-            state.frame_start = state.buffer.write_pos();
-            state.overflowed = false;
-
+        });
+    }
+    pub unsafe fn write(bytes: &[u8]) {
+        if LOG_DEPTH.load(Ordering::Relaxed) > 1 {
+            return ();
+        }
+        let state = &mut *STATE.0.get();
+        let State {
+            encoder,
+            buffer,
+            overflowed,
+            ..
+        } = state;
+        encoder.write(bytes, |encoded| {
+            if !buffer.push(encoded) {
+                *overflowed = true;
+            }
+        })
+    }
+    pub unsafe fn flush() {
+        // Nothing to do here
+    }
+    pub unsafe fn release() {
+        if LOG_DEPTH.load(Ordering::Relaxed) > 1 {
+            LOG_DEPTH.fetch_sub(1, Ordering::Relaxed);
+            return ();
+        }
+        let state = &mut *STATE.0.get();
+        {
             let State {
                 encoder,
                 buffer,
                 overflowed,
                 ..
-            } = state;
-            encoder.start_frame(|bytes| {
+            } = &mut *state;
+            encoder.end_frame(|bytes| {
                 if !buffer.push(bytes) {
                     *overflowed = true;
                 }
             });
         }
-        unsafe fn write(bytes: &[u8]) {
-            if LOG_DEPTH.load(Ordering::Relaxed) > 1 {
-                return ();
-            }
-            let state = &mut *STATE.0.get();
-            let State {
-                encoder,
-                buffer,
-                overflowed,
-                ..
-            } = state;
-            encoder.write(bytes, |encoded| {
-                if !buffer.push(encoded) {
-                    *overflowed = true;
-                }
-            })
-        }
-        unsafe fn flush() {
-            // Nothing to do here
-        }
-        unsafe fn release() {
-            if LOG_DEPTH.load(Ordering::Relaxed) > 1 {
-                LOG_DEPTH.fetch_sub(1, Ordering::Relaxed);
-                return ();
-            }
-            let state = &mut *STATE.0.get();
-            {
-                let State {
-                    encoder,
-                    buffer,
-                    overflowed,
-                    ..
-                } = &mut *state;
-                encoder.end_frame(|bytes| {
-                    if !buffer.push(bytes) {
-                        *overflowed = true;
-                    }
-                });
-            }
 
-            if state.overflowed {
-                state.buffer.truncate_to(state.frame_start);
-                DROPPED.fetch_add(1, Ordering::Relaxed);
-            }
-
-            LOG_DEPTH.store(0, Ordering::Relaxed);
-            critical_section::release(state.restore);
+        if state.overflowed {
+            state.buffer.truncate_to(state.frame_start);
+            DROPPED.fetch_add(1, Ordering::Relaxed);
         }
+
+        LOG_DEPTH.store(0, Ordering::Relaxed);
+        critical_section::release(state.restore);
     }
 }
 pub fn read(out: &mut [u8]) -> usize {
@@ -195,6 +191,28 @@ pub fn nested_dropped() -> u32 {
     NESTED_DROPPED.load(Ordering::Relaxed)
 }
 
+#[macro_export]
+macro_rules! global_logger {
+    () => {
+        #[defmt::global_logger]
+        struct HypedLogger;
+
+        unsafe impl defmt::Logger for HypedLogger {
+            fn acquire() {
+                $crate::__private::acquire()
+            }
+            unsafe fn write(bytes: &[u8]) {
+                $crate::__private::write(bytes)
+            }
+            unsafe fn flush() {
+                $crate::__private::flush()
+            }
+            unsafe fn release() {
+                $crate::__private::release()
+            }
+        }
+    };
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -33,9 +33,9 @@ use embassy_stm32::{
 use embassy_time::{Duration, Instant, Timer};
 use rtt_target::{rtt_init, ChannelMode, UpChannel};
 
-use hyped_logger as _;
 use panic_probe as _;
 
+hyped_logger::global_logger!();
 // ---------------------------------------------------------------------------
 // Test configuration: change these and re-run
 // ---------------------------------------------------------------------------
